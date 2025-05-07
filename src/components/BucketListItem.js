@@ -101,7 +101,7 @@ const BucketListItem = ({
   };
 
   const handleSaveItemEdit = () => {
-    onEdit(editedItem);
+    onEdit(item.id, editedItem);
     handleCloseEditItemDialog();
   };
 

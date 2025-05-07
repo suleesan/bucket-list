@@ -44,6 +44,7 @@ const BucketList = () => {
     deleteDateSuggestion,
     editDateSuggestion,
     deleteBucketListItem,
+    updateBucketListItem,
   } = useDatabase();
   const { currentUser } = useAuth();
 
@@ -248,9 +249,19 @@ const BucketList = () => {
     }
   };
 
-  const handleEditItem = (item) => {
-    setEditingItem(item);
-    setEditDialog(true);
+  const handleEditItem = async (itemId, editedItem) => {
+    try {
+      await updateBucketListItem(itemId, editedItem);
+      // Update items optimistically
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId ? { ...item, ...editedItem } : item
+        )
+      );
+    } catch (error) {
+      setError("Failed to update bucket list item");
+      console.error(error);
+    }
   };
 
   // Handler to open comment dialog
