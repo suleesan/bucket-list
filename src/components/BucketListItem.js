@@ -204,10 +204,10 @@ const BucketListItem = ({
                         : ""}
                     </>
                   }
-                  onClick={() => handleVoteForDate(item.id, index)}
+                  onClick={() => currentUser && handleVoteForDate(index)}
                   sx={{ mr: 1, mb: 1 }}
                   deleteIcon={
-                    suggestion.suggestedBy === currentUser.uid ? (
+                    suggestion.suggestedBy === currentUser?.uid ? (
                       <EditIcon
                         onClick={(e) => handleOpenEditDialog(index, e)}
                         sx={{ cursor: "pointer" }}
@@ -215,7 +215,7 @@ const BucketListItem = ({
                     ) : undefined
                   }
                   onDelete={
-                    suggestion.suggestedBy === currentUser.uid
+                    suggestion.suggestedBy === currentUser?.uid
                       ? (e) => handleOpenEditDialog(index, e)
                       : undefined
                   }
