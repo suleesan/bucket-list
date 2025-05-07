@@ -16,11 +16,13 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
+  Snackbar,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDatabase } from "../contexts/DatabaseContext";
+import MuiAlert from "@mui/material/Alert";
 
 const Home = () => {
   const [groups, setGroups] = useState([]);
@@ -30,6 +32,7 @@ const Home = () => {
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [joinCode, setJoinCode] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { createGroup, getGroups, joinGroupByCode } = useDatabase();
@@ -90,6 +93,7 @@ const Home = () => {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
+    setCopySuccess(true);
   };
 
   if (!currentUser) {
@@ -111,7 +115,7 @@ const Home = () => {
               fontWeight: "bold",
             }}
           >
-            Welcome to Bucket List
+            Welcome to Rally
           </Typography>
           <Typography variant="h5" color="text.secondary" paragraph>
             Create and share your bucket list with friends
@@ -249,9 +253,6 @@ const Home = () => {
                       </IconButton>
                     </Tooltip>
                   </Box>
-                  <Typography color="text.secondary" gutterBottom>
-                    {group.members?.length || 0} members
-                  </Typography>
                   <Box sx={{ mb: 1 }}>
                     <Typography
                       variant="body2"
@@ -359,6 +360,21 @@ const Home = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={copySuccess}
+        autoHideDuration={2000}
+        onClose={() => setCopySuccess(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <MuiAlert
+          onClose={() => setCopySuccess(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          Group code copied!
+        </MuiAlert>
+      </Snackbar>
     </Container>
   );
 };

@@ -12,6 +12,7 @@ import {
   orderBy,
   serverTimestamp,
   arrayUnion,
+  arrayRemove,
   setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -198,7 +199,7 @@ export function DatabaseProvider({ children }) {
           date,
           suggestedBy: currentUser.uid,
           votes: [currentUser.uid],
-          createdAt: serverTimestamp(),
+          createdAt: new Date().toISOString(),
         }),
       });
     } catch (error) {
@@ -228,6 +229,34 @@ export function DatabaseProvider({ children }) {
     }
   };
 
+  // Upvote an item
+  const upvoteBucketListItem = async (itemId, userId) => {
+    const itemRef = doc(db, "bucketListItems", itemId);
+    await updateDoc(itemRef, {
+      upvotes: arrayUnion(userId),
+    });
+  };
+
+  // Remove upvote
+  const removeUpvoteBucketListItem = async (itemId, userId) => {
+    const itemRef = doc(db, "bucketListItems", itemId);
+    await updateDoc(itemRef, {
+      upvotes: arrayRemove(userId),
+    });
+  };
+
+  // Fetch user info for upvoters
+  const getUsersByIds = async (userIds) => {
+    const users = [];
+    for (const uid of userIds) {
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (userDoc.exists()) {
+        users.push({ id: uid, ...userDoc.data() });
+      }
+    }
+    return users;
+  };
+
   const value = {
     loading,
     createGroup,
@@ -241,6 +270,9 @@ export function DatabaseProvider({ children }) {
     deleteBucketListItem,
     addDateSuggestion,
     voteForDate,
+    upvoteBucketListItem,
+    removeUpvoteBucketListItem,
+    getUsersByIds,
   };
 
   return (

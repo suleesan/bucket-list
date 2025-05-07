@@ -3,24 +3,21 @@ import { useParams } from "react-router-dom";
 import {
   Container,
   Typography,
-  Card,
-  CardContent,
   Button,
-  TextField,
   Box,
   Grid,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
   Alert,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import EventIcon from "@mui/icons-material/Event";
 import { useDatabase } from "../contexts/DatabaseContext";
 import { useAuth } from "../contexts/AuthContext";
+import BucketListItem from "../components/BucketListItem";
+import SuggestDateDialog from "../components/SuggestDateDialog";
 
 const BucketList = () => {
   const { groupId } = useParams();
@@ -38,6 +35,9 @@ const BucketList = () => {
     addDateSuggestion,
     voteForDate,
     getGroup,
+    getUsersByIds,
+    upvoteBucketListItem,
+    removeUpvoteBucketListItem,
   } = useDatabase();
   const { currentUser } = useAuth();
 
@@ -48,23 +48,79 @@ const BucketList = () => {
     date: "",
   });
 
-  useEffect(() => {
-    const loadGroupAndItems = async () => {
-      try {
-        const group = await getGroup(groupId);
-        setGroupName(group.name);
-        const groupItems = await getBucketListItems(groupId);
-        setItems(groupItems);
-      } catch (error) {
-        setError("Failed to load group and items");
-        console.error(error);
-      }
-    };
+  const [creators, setCreators] = useState({});
+  const [upvoters, setUpvoters] = useState({});
+  const [dateSuggestionUsers, setDateSuggestionUsers] = useState({});
 
+  const [suggestDateDialogOpen, setSuggestDateDialogOpen] = useState(false);
+  const [suggestDateItemId, setSuggestDateItemId] = useState(null);
+  const [suggestedDate, setSuggestedDate] = useState("");
+
+  const loadGroupAndItems = async () => {
+    try {
+      const group = await getGroup(groupId);
+      setGroupName(group.name);
+      const groupItems = await getBucketListItems(groupId);
+      setItems(groupItems);
+    } catch (error) {
+      setError("Failed to load group and items");
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
     if (groupId) {
       loadGroupAndItems();
     }
   }, [groupId, getBucketListItems, getGroup]);
+
+  useEffect(() => {
+    const fetchUpvoters = async () => {
+      const upvotersMap = {};
+      for (const item of items) {
+        if (item.upvotes && item.upvotes.length > 0) {
+          upvotersMap[item.id] = await getUsersByIds(item.upvotes);
+        } else {
+          upvotersMap[item.id] = [];
+        }
+      }
+      setUpvoters(upvotersMap);
+    };
+    fetchUpvoters();
+  }, [items]);
+
+  useEffect(() => {
+    const fetchCreators = async () => {
+      const creatorsMap = {};
+      for (const item of items) {
+        if (item.createdBy) {
+          const [user] = await getUsersByIds([item.createdBy]);
+          creatorsMap[item.id] = user;
+        }
+      }
+      setCreators(creatorsMap);
+    };
+    fetchCreators();
+  }, [items, getUsersByIds]);
+
+  useEffect(() => {
+    const fetchDateSuggestionUsers = async () => {
+      const userMap = {};
+      for (const item of items) {
+        if (item.dateSuggestions && item.dateSuggestions.length > 0) {
+          for (const suggestion of item.dateSuggestions) {
+            const uid = suggestion.suggestedBy;
+            if (uid && !userMap[uid]) {
+              const [user] = await getUsersByIds([uid]);
+              userMap[uid] = user;
+            }
+          }
+        }
+      }
+      setDateSuggestionUsers(userMap);
+    };
+    fetchDateSuggestionUsers();
+  }, [items, getUsersByIds]);
 
   const handleAddItem = async () => {
     if (!newItem.title.trim()) return;
@@ -84,12 +140,23 @@ const BucketList = () => {
     }
   };
 
-  const handleSuggestDate = async (itemId) => {
+  const openSuggestDateDialog = (itemId) => {
+    setSuggestDateItemId(itemId);
+    setSuggestedDate("");
+    setSuggestDateDialogOpen(true);
+  };
+
+  const handleSubmitSuggestDate = async () => {
+    if (!suggestedDate) return;
+    // Format date as MM-DD-YYYY
+    const [yyyy, mm, dd] = suggestedDate.split("-");
+    const formattedDate = `${mm}-${dd}-${yyyy}`;
     try {
-      const date = prompt("Enter a suggested date (YYYY-MM-DD):");
-      if (date) {
-        await addDateSuggestion(itemId, date);
-      }
+      await addDateSuggestion(suggestDateItemId, formattedDate);
+      setSuggestDateDialogOpen(false);
+      setSuggestDateItemId(null);
+      setSuggestedDate("");
+      await loadGroupAndItems();
     } catch (error) {
       setError("Failed to add date suggestion");
       console.error(error);
@@ -105,30 +172,9 @@ const BucketList = () => {
     }
   };
 
-  const handleEditItem = async () => {
-    if (!editingItem.title.trim()) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      await updateBucketListItem(editingItem.id, {
-        title: editingItem.title,
-        description: editingItem.description,
-        location: editingItem.location,
-        date: editingItem.date,
-      });
-      setEditingItem(null);
-      setEditDialog(false);
-      // Refresh items
-      const groupItems = await getBucketListItems(groupId);
-      setItems(groupItems);
-    } catch (error) {
-      setError("Failed to update bucket list item");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setEditDialog(true);
   };
 
   return (
@@ -179,139 +225,46 @@ const BucketList = () => {
       <Grid container spacing={3}>
         {items.length === 0 ? (
           <Grid>
-            <Card
-              sx={{
-                p: 4,
-                textAlign: "center",
-                background: "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
-              }}
-            >
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No bucket list items yet
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Click the "Add Item" button to create your first bucket list
-                item
-              </Typography>
-            </Card>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No bucket list items yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Click the "Add Item" button to create your first bucket list item
+            </Typography>
           </Grid>
         ) : (
           items.map((item) => (
             <Grid size={{ xs: 6, sm: 3 }} key={item.id}>
-              <Card
-                sx={{
-                  height: "300px",
-                  display: "flex",
-                  flexDirection: "column",
-                  background:
-                    "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    transition: "transform 0.2s",
-                  },
+              <BucketListItem
+                item={item}
+                creators={creators}
+                upvoters={upvoters}
+                dateSuggestionUsers={dateSuggestionUsers}
+                currentUser={currentUser}
+                onEdit={handleEditItem}
+                onUpvote={async (itemId, userId) => {
+                  await upvoteBucketListItem(itemId, userId);
+                  await loadGroupAndItems();
                 }}
-              >
-                <CardContent
-                  sx={{
-                    flexGrow: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    height: "100%",
-                  }}
-                >
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 2,
-                      }}
-                    >
-                      <Typography
-                        variant="h5"
-                        component="h2"
-                        sx={{
-                          color: "#5D8AA8",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {item.title}
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => {
-                          setEditingItem(item);
-                          setEditDialog(true);
-                        }}
-                        sx={{
-                          borderColor: "primary.main",
-                          color: "primary.main",
-                          "&:hover": {
-                            borderColor: "primary.dark",
-                            color: "primary.dark",
-                          },
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </Box>
-                    <Box sx={{ mb: 2 }}>
-                      <Chip
-                        icon={<LocationOnIcon />}
-                        label={item.location}
-                        variant="outlined"
-                        sx={{ mr: 1, mb: 1 }}
-                      />
-                      <Chip
-                        icon={<EventIcon />}
-                        label={item.date}
-                        variant="outlined"
-                        sx={{ mr: 1, mb: 1 }}
-                      />
-                    </Box>
-                    <Typography color="text.secondary" paragraph>
-                      {item.description}
-                    </Typography>
-                    {item.dateSuggestions?.length > 0 && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Date Suggestions:
-                        </Typography>
-                        {item.dateSuggestions.map((suggestion, index) => (
-                          <Chip
-                            key={index}
-                            label={`${suggestion.date} (${suggestion.votes.length} votes)`}
-                            onClick={() => handleVoteForDate(item.id, index)}
-                            sx={{ mr: 1, mb: 1 }}
-                          />
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    onClick={() => handleSuggestDate(item.id)}
-                    sx={{
-                      borderColor: "primary.main",
-                      color: "primary.main",
-                      "&:hover": {
-                        borderColor: "primary.dark",
-                        color: "primary.dark",
-                      },
-                      mt: "auto",
-                    }}
-                  >
-                    Suggest Date
-                  </Button>
-                </CardContent>
-              </Card>
+                onRemoveUpvote={async (itemId, userId) => {
+                  await removeUpvoteBucketListItem(itemId, userId);
+                  await loadGroupAndItems();
+                }}
+                openSuggestDateDialog={openSuggestDateDialog}
+                handleVoteForDate={handleVoteForDate}
+              />
             </Grid>
           ))
         )}
       </Grid>
+
+      <SuggestDateDialog
+        open={suggestDateDialogOpen}
+        value={suggestedDate}
+        onChange={setSuggestedDate}
+        onClose={() => setSuggestDateDialogOpen(false)}
+        onSubmit={handleSubmitSuggestDate}
+      />
 
       <Dialog
         open={openDialog}

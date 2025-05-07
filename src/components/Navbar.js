@@ -24,7 +24,7 @@ const Navbar = () => {
           sx={{ flexGrow: 1, cursor: "pointer" }}
           onClick={() => navigate("/")}
         >
-          Bucket List
+          Rally
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           {currentUser ? (
