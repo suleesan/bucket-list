@@ -139,7 +139,6 @@ export function DatabaseProvider({ children }) {
     }
   };
 
-  // Bucket List Items operations
   const createBucketListItem = async (groupId, item) => {
     try {
       const itemRef = await addDoc(collection(db, "bucketListItems"), {
@@ -190,7 +189,6 @@ export function DatabaseProvider({ children }) {
     }
   };
 
-  // Date Suggestions operations
   const addDateSuggestion = async (itemId, date) => {
     try {
       const itemRef = doc(db, "bucketListItems", itemId);
@@ -257,6 +255,22 @@ export function DatabaseProvider({ children }) {
     return users;
   };
 
+  const deleteDateSuggestion = async (itemId, suggestionIndex) => {
+    const itemRef = doc(db, "bucketListItems", itemId);
+    const itemSnap = await getDoc(itemRef);
+    const dateSuggestions = itemSnap.data().dateSuggestions || [];
+    dateSuggestions.splice(suggestionIndex, 1);
+    await updateDoc(itemRef, { dateSuggestions });
+  };
+
+  const editDateSuggestion = async (itemId, suggestionIndex, newDate) => {
+    const itemRef = doc(db, "bucketListItems", itemId);
+    const itemSnap = await getDoc(itemRef);
+    const dateSuggestions = itemSnap.data().dateSuggestions || [];
+    dateSuggestions[suggestionIndex].date = newDate;
+    await updateDoc(itemRef, { dateSuggestions });
+  };
+
   const value = {
     loading,
     createGroup,
@@ -273,6 +287,8 @@ export function DatabaseProvider({ children }) {
     upvoteBucketListItem,
     removeUpvoteBucketListItem,
     getUsersByIds,
+    deleteDateSuggestion,
+    editDateSuggestion,
   };
 
   return (

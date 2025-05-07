@@ -82,8 +82,16 @@ const Login = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <StyledPaper elevation={3}>
+    <Container
+      component="main"
+      maxWidth="xs"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <StyledPaper elevation={3} sx={{ marginTop: "100px" }}>
         <Typography component="h1" variant="h5">
           {activeTab === 0 ? "Create Account" : "Sign In"}
         </Typography>

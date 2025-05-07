@@ -17,6 +17,7 @@ import {
   IconButton,
   Tooltip,
   Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useNavigate } from "react-router-dom";
@@ -28,7 +29,7 @@ const Home = () => {
   const [groups, setGroups] = useState([]);
   const [newGroupName, setNewGroupName] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -41,12 +42,15 @@ const Home = () => {
     const loadGroups = async () => {
       try {
         if (currentUser) {
+          setLoading(true);
           const userGroups = await getGroups();
           setGroups(userGroups);
         }
       } catch (error) {
         setError("Failed to load groups");
         console.error(error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -190,120 +194,135 @@ const Home = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {groups.length === 0 ? (
-          <Grid item xs={12}>
-            <Card
-              sx={{
-                p: 4,
-                textAlign: "center",
-                background: "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
-              }}
-            >
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No groups yet
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Create a new group to get started with your bucket list
-              </Typography>
-            </Card>
-          </Grid>
-        ) : (
-          groups.map((group) => (
-            <Grid size={{ xs: 12, sm: 6 }} key={group.id}>
+      {loading ? (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "50vh",
+            width: "100%",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {groups.length === 0 ? (
+            <Grid item xs={12}>
               <Card
                 sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
+                  p: 4,
+                  textAlign: "center",
                   background:
                     "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    transition: "transform 0.2s",
-                  },
                 }}
               >
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 2,
-                    }}
-                  >
-                    <Typography
-                      variant="h5"
-                      component="h2"
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No groups yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Create a new group to get started with your bucket list
+                </Typography>
+              </Card>
+            </Grid>
+          ) : (
+            groups.map((group) => (
+              <Grid size={{ xs: 12, sm: 6 }} key={group.id}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    background:
+                      "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      transition: "transform 0.2s",
+                    },
+                  }}
+                >
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box
                       sx={{
-                        color: "#5D8AA8",
-                        fontWeight: "bold",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 2,
                       }}
                     >
-                      {group.name}
-                    </Typography>
-                    <Tooltip title="Copy group code">
-                      <IconButton
-                        onClick={() => copyToClipboard(group.code)}
-                        size="small"
-                        sx={{ color: "#5D8AA8" }}
+                      <Typography
+                        variant="h5"
+                        component="h2"
+                        sx={{
+                          color: "#5D8AA8",
+                          fontWeight: "bold",
+                        }}
                       >
-                        <ContentCopyIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                  <Box sx={{ mb: 1 }}>
+                        {group.name}
+                      </Typography>
+                      <Tooltip title="Copy group code">
+                        <IconButton
+                          onClick={() => copyToClipboard(group.code)}
+                          size="small"
+                          sx={{ color: "#5D8AA8" }}
+                        >
+                          <ContentCopyIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    <Box sx={{ mb: 1 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        gutterBottom
+                      >
+                        Members:
+                      </Typography>
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        {group.memberDetails?.map((member) => (
+                          <Typography
+                            key={member.id}
+                            variant="body2"
+                            sx={{
+                              bgcolor: "primary.light",
+                              color: "primary.contrastText",
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1,
+                            }}
+                          >
+                            {member.username}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
                     <Typography
                       variant="body2"
                       color="text.secondary"
                       gutterBottom
                     >
-                      Members:
+                      Code: {group.code}
                     </Typography>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {group.memberDetails?.map((member) => (
-                        <Typography
-                          key={member.id}
-                          variant="body2"
-                          sx={{
-                            bgcolor: "primary.light",
-                            color: "primary.contrastText",
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                          }}
-                        >
-                          {member.username}
-                        </Typography>
-                      ))}
-                    </Box>
-                  </Box>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    Code: {group.code}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    onClick={() => navigate(`/bucket-list/${group.id}`)}
-                    sx={{
-                      mt: 2,
-                      bgcolor: "primary.main",
-                      "&:hover": { bgcolor: "primary.dark" },
-                    }}
-                  >
-                    View Bucket List
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))
-        )}
-      </Grid>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={() => navigate(`/bucket-list/${group.id}`)}
+                      sx={{
+                        mt: 2,
+                        bgcolor: "primary.main",
+                        "&:hover": { bgcolor: "primary.dark" },
+                      }}
+                    >
+                      View Bucket List
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          )}
+        </Grid>
+      )}
 
       <Dialog open={showJoinDialog} onClose={() => setShowJoinDialog(false)}>
         <DialogTitle>Join a Group</DialogTitle>

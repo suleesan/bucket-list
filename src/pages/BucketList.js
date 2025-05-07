@@ -12,12 +12,16 @@ import {
   DialogActions,
   TextField,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useDatabase } from "../contexts/DatabaseContext";
 import { useAuth } from "../contexts/AuthContext";
 import BucketListItem from "../components/BucketListItem";
 import SuggestDateDialog from "../components/SuggestDateDialog";
+import CommentSection from "../components/CommentSection";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 
 const BucketList = () => {
   const { groupId } = useParams();
@@ -27,17 +31,19 @@ const BucketList = () => {
   const [editDialog, setEditDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const {
     createBucketListItem,
     getBucketListItems,
-    updateBucketListItem,
     addDateSuggestion,
     voteForDate,
     getGroup,
     getUsersByIds,
     upvoteBucketListItem,
     removeUpvoteBucketListItem,
+    deleteDateSuggestion,
+    editDateSuggestion,
+    deleteBucketListItem,
   } = useDatabase();
   const { currentUser } = useAuth();
 
@@ -56,15 +62,40 @@ const BucketList = () => {
   const [suggestDateItemId, setSuggestDateItemId] = useState(null);
   const [suggestedDate, setSuggestedDate] = useState("");
 
+  // Comment dialog state
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [commentItemId, setCommentItemId] = useState(null);
+
+  const [commentCounts, setCommentCounts] = useState({});
+
+  const fetchCommentCounts = async (items) => {
+    const counts = {};
+    for (const item of items) {
+      const commentsRef = collection(
+        db,
+        "bucketListItems",
+        item.id,
+        "comments"
+      );
+      const snapshot = await getDocs(commentsRef);
+      counts[item.id] = snapshot.size;
+    }
+    setCommentCounts(counts);
+  };
+
   const loadGroupAndItems = async () => {
     try {
+      setLoading(true);
       const group = await getGroup(groupId);
       setGroupName(group.name);
       const groupItems = await getBucketListItems(groupId);
       setItems(groupItems);
+      await fetchCommentCounts(groupItems);
     } catch (error) {
       setError("Failed to load group and items");
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -129,7 +160,20 @@ const BucketList = () => {
     setError("");
 
     try {
-      await createBucketListItem(groupId, newItem);
+      const newItemId = await createBucketListItem(groupId, newItem);
+      // Create a new item object with the returned ID
+      const createdItem = {
+        id: newItemId,
+        ...newItem,
+        createdBy: currentUser.uid,
+        createdAt: new Date(),
+        status: false,
+        dateSuggestions: [],
+        upvotes: [],
+      };
+      // Update the items state immediately
+      setItems((prevItems) => [createdItem, ...prevItems]);
+      // Reset form and close dialog
       setNewItem({ title: "", description: "", location: "", date: "" });
       setOpenDialog(false);
     } catch (error) {
@@ -152,12 +196,43 @@ const BucketList = () => {
     const [yyyy, mm, dd] = suggestedDate.split("-");
     const formattedDate = `${mm}-${dd}-${yyyy}`;
     try {
+      const newSuggestion = {
+        date: formattedDate,
+        suggestedBy: currentUser.uid,
+        votes: [],
+      };
+
+      // Update UI optimistically
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === suggestDateItemId
+            ? {
+                ...item,
+                dateSuggestions: [
+                  ...(item.dateSuggestions || []),
+                  newSuggestion,
+                ],
+              }
+            : item
+        )
+      );
+
       await addDateSuggestion(suggestDateItemId, formattedDate);
       setSuggestDateDialogOpen(false);
       setSuggestDateItemId(null);
       setSuggestedDate("");
-      await loadGroupAndItems();
     } catch (error) {
+      // Revert optimistic update on error
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === suggestDateItemId
+            ? {
+                ...item,
+                dateSuggestions: item.dateSuggestions.slice(0, -1),
+              }
+            : item
+        )
+      );
       setError("Failed to add date suggestion");
       console.error(error);
     }
@@ -166,6 +241,7 @@ const BucketList = () => {
   const handleVoteForDate = async (itemId, suggestionIndex) => {
     try {
       await voteForDate(itemId, suggestionIndex);
+      await loadGroupAndItems();
     } catch (error) {
       setError("Failed to vote for date");
       console.error(error);
@@ -175,6 +251,90 @@ const BucketList = () => {
   const handleEditItem = (item) => {
     setEditingItem(item);
     setEditDialog(true);
+  };
+
+  // Handler to open comment dialog
+  const handleOpenComments = (itemId) => {
+    setCommentItemId(itemId);
+    setCommentDialogOpen(true);
+  };
+
+  const handleCloseComments = () => {
+    setCommentDialogOpen(false);
+    setCommentItemId(null);
+  };
+
+  const handleCommentCountChange = (itemId, count) => {
+    setCommentCounts((prev) => ({
+      ...prev,
+      [itemId]: count,
+    }));
+  };
+
+  const handleDeleteDateSuggestion = async (itemId, suggestionIndex) => {
+    try {
+      // Update UI optimistically
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                dateSuggestions: item.dateSuggestions.filter(
+                  (_, index) => index !== suggestionIndex
+                ),
+              }
+            : item
+        )
+      );
+
+      await deleteDateSuggestion(itemId, suggestionIndex);
+    } catch (error) {
+      // Revert optimistic update on error
+      await loadGroupAndItems();
+      setError("Failed to delete date suggestion");
+      console.error(error);
+    }
+  };
+
+  const handleEditDateSuggestion = async (itemId, suggestionIndex, newDate) => {
+    try {
+      // Format date as MM-DD-YYYY
+      const [yyyy, mm, dd] = newDate.split("-");
+      const formattedDate = `${mm}-${dd}-${yyyy}`;
+
+      // Update UI optimistically
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                dateSuggestions: item.dateSuggestions.map((suggestion, index) =>
+                  index === suggestionIndex
+                    ? { ...suggestion, date: formattedDate }
+                    : suggestion
+                ),
+              }
+            : item
+        )
+      );
+
+      await editDateSuggestion(itemId, suggestionIndex, formattedDate);
+    } catch (error) {
+      // Revert optimistic update on error
+      await loadGroupAndItems();
+      setError("Failed to edit date suggestion");
+      console.error(error);
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await deleteBucketListItem(itemId);
+      await loadGroupAndItems(); // Refresh the list after deletion
+    } catch (error) {
+      setError("Failed to delete bucket list item");
+      console.error(error);
+    }
   };
 
   return (
@@ -222,18 +382,30 @@ const BucketList = () => {
         </Button>
       </Box>
 
-      <Grid container spacing={3}>
-        {items.length === 0 ? (
-          <Grid>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No bucket list items yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Click the "Add Item" button to create your first bucket list item
-            </Typography>
-          </Grid>
-        ) : (
-          items.map((item) => (
+      {loading ? (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "50vh",
+            width: "100%",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      ) : items.length === 0 ? (
+        <Grid>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No bucket list items yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Click the "Add Item" button to create your first bucket list item
+          </Typography>
+        </Grid>
+      ) : (
+        <Grid container spacing={3}>
+          {items.map((item) => (
             <Grid size={{ xs: 6, sm: 3 }} key={item.id}>
               <BucketListItem
                 item={item}
@@ -244,19 +416,46 @@ const BucketList = () => {
                 onEdit={handleEditItem}
                 onUpvote={async (itemId, userId) => {
                   await upvoteBucketListItem(itemId, userId);
-                  await loadGroupAndItems();
+                  // Update items optimistically
+                  setItems((prevItems) =>
+                    prevItems.map((item) =>
+                      item.id === itemId
+                        ? {
+                            ...item,
+                            upvotes: [...(item.upvotes || []), userId],
+                          }
+                        : item
+                    )
+                  );
                 }}
                 onRemoveUpvote={async (itemId, userId) => {
                   await removeUpvoteBucketListItem(itemId, userId);
-                  await loadGroupAndItems();
+                  // Update items optimistically
+                  setItems((prevItems) =>
+                    prevItems.map((item) =>
+                      item.id === itemId
+                        ? {
+                            ...item,
+                            upvotes: (item.upvotes || []).filter(
+                              (id) => id !== userId
+                            ),
+                          }
+                        : item
+                    )
+                  );
                 }}
                 openSuggestDateDialog={openSuggestDateDialog}
                 handleVoteForDate={handleVoteForDate}
+                onOpenComments={handleOpenComments}
+                handleDeleteDateSuggestion={handleDeleteDateSuggestion}
+                handleEditDateSuggestion={handleEditDateSuggestion}
+                onDelete={handleDeleteItem}
+                commentCount={commentCounts[item.id] || 0}
               />
             </Grid>
-          ))
-        )}
-      </Grid>
+          ))}
+        </Grid>
+      )}
 
       <SuggestDateDialog
         open={suggestDateDialogOpen}
@@ -264,6 +463,15 @@ const BucketList = () => {
         onChange={setSuggestedDate}
         onClose={() => setSuggestDateDialogOpen(false)}
         onSubmit={handleSubmitSuggestDate}
+      />
+
+      <CommentSection
+        open={commentDialogOpen}
+        onClose={handleCloseComments}
+        itemId={commentItemId}
+        currentUser={currentUser}
+        itemTitle={items.find((item) => item.id === commentItemId)?.title}
+        onCommentCountChange={handleCommentCountChange}
       />
 
       <Dialog
