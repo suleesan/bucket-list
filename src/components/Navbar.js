@@ -19,9 +19,9 @@ const Navbar = () => {
     <AppBar position="static" color="primary" elevation={0}>
       <Toolbar>
         <Typography
-          variant="h6"
+          variant="h5"
           component="div"
-          sx={{ flexGrow: 1, cursor: "pointer" }}
+          sx={{ flexGrow: 1, cursor: "pointer", color: "black" }}
           onClick={() => navigate("/")}
         >
           Rally
@@ -29,7 +29,7 @@ const Navbar = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           {currentUser ? (
             <>
-              <Typography variant="body1" sx={{ mr: 2 }}>
+              <Typography variant="body1" sx={{ mr: 2, color: "black" }}>
                 {currentUser.displayName}
               </Typography>
               <Button color="inherit" onClick={handleLogout}>

@@ -369,14 +369,10 @@ const BucketList = () => {
             variant="h4"
             component="h1"
             sx={{
-              color: "#5D8AA8",
               fontWeight: "bold",
             }}
           >
             {groupName}
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Bucket List Items
           </Typography>
         </Box>
         <Button
@@ -503,6 +499,11 @@ const BucketList = () => {
               }
               disabled={loading}
               sx={{ mb: 2 }}
+              inputProps={{
+                maxLength: 100,
+                pattern: ".*",
+                inputMode: "text",
+              }}
             />
             <TextField
               fullWidth
@@ -573,6 +574,11 @@ const BucketList = () => {
               }
               disabled={loading}
               sx={{ mb: 2 }}
+              inputProps={{
+                maxLength: 100,
+                pattern: ".*",
+                inputMode: "text",
+              }}
             />
             <TextField
               fullWidth

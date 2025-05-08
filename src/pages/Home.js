@@ -158,7 +158,7 @@ const Home = () => {
           variant="h4"
           component="h1"
           sx={{
-            color: "#5D8AA8",
+            color: "primary.main",
             fontWeight: "bold",
           }}
         >
@@ -214,8 +214,7 @@ const Home = () => {
                 sx={{
                   p: 4,
                   textAlign: "center",
-                  background:
-                    "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
+                  background: "#fff",
                 }}
               >
                 <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -234,8 +233,7 @@ const Home = () => {
                     height: "100%",
                     display: "flex",
                     flexDirection: "column",
-                    background:
-                      "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
+                    background: "#fff",
                     "&:hover": {
                       transform: "translateY(-4px)",
                       transition: "transform 0.2s",
@@ -255,7 +253,7 @@ const Home = () => {
                         variant="h5"
                         component="h2"
                         sx={{
-                          color: "#5D8AA8",
+                          color: "primary.main",
                           fontWeight: "bold",
                         }}
                       >
@@ -265,7 +263,7 @@ const Home = () => {
                         <IconButton
                           onClick={() => copyToClipboard(group.code)}
                           size="small"
-                          sx={{ color: "#5D8AA8" }}
+                          sx={{ color: "primary.main" }}
                         >
                           <ContentCopyIcon />
                         </IconButton>
@@ -366,6 +364,11 @@ const Home = () => {
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
             disabled={loading}
+            inputProps={{
+              maxLength: 50,
+              pattern: ".*",
+              inputMode: "text",
+            }}
           />
         </DialogContent>
         <DialogActions>
