@@ -115,7 +115,7 @@ const BucketListItem = ({
       sx={{
         display: "flex",
         flexDirection: "column",
-        background: "linear-gradient(45deg, #F0F8FF 30%, #b8e0f7 90%)",
+        background: "#fff",
         height: "100%",
         "&:hover": {
           transform: "translateY(-4px)",
@@ -144,7 +144,7 @@ const BucketListItem = ({
               <Typography
                 variant="h5"
                 component="h2"
-                sx={{ color: "#5D8AA8", fontWeight: "bold" }}
+                sx={{ color: "primary.main", fontWeight: "bold" }}
               >
                 {item.title}
               </Typography>
@@ -316,6 +316,11 @@ const BucketListItem = ({
               setEditedItem({ ...editedItem, title: e.target.value })
             }
             sx={{ mb: 2, mt: 2 }}
+            inputProps={{
+              maxLength: 100,
+              pattern: ".*",
+              inputMode: "text",
+            }}
           />
           <TextField
             fullWidth
