@@ -133,7 +133,7 @@ const CommentSection = ({
               <ListItemText
                 primary={
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="subtitle2">
+                    <Typography>
                       {userMap[comment.createdBy]?.username || "Unknown"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
