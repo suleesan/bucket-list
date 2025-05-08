@@ -11,15 +11,16 @@ import {
   DialogActions,
   TextField,
   IconButton,
+  MenuItem,
 } from "@mui/material";
-import ThumbUpIcon from "@mui/icons-material/ThumbUp";
-import ThumbUpOutlinedIcon from "@mui/icons-material/ThumbUpOutlined";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
-import EventIcon from "@mui/icons-material/Event";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
+import PersonIcon from "@mui/icons-material/Person";
 import EditDateSuggestionDialog from "./EditDateSuggestionDialog";
 import { useState } from "react";
 
@@ -123,12 +124,44 @@ const BucketListItem = ({
         },
       }}
     >
+      <Box
+        sx={{
+          height: "200px",
+          backgroundColor: "#A0CBCF",
+          position: "relative",
+        }}
+      >
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={handleOpenEditItemDialog}
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            borderColor: "black",
+            color: "black",
+            backgroundColor: "rgba(255, 255, 255, 0.5)",
+            opacity: 0,
+            transition: "opacity 0.2s",
+            "&:hover": {
+              borderColor: "black",
+              color: "black",
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
+            },
+            ".MuiCard-root:hover &": {
+              opacity: 1,
+            },
+          }}
+        >
+          Edit
+        </Button>
+      </Box>
       <CardContent
         sx={{
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          height: "100%",
         }}
       >
         <Box sx={{ flexGrow: 1 }}>
@@ -148,44 +181,27 @@ const BucketListItem = ({
               >
                 {item.title}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
+              >
+                <PersonIcon sx={{ fontSize: 16 }} />
                 {creators[item.id]?.username || "Unknown"}
               </Typography>
+              <Typography
+                variant="body2"
+                sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
+              >
+                <LocationOnIcon sx={{ fontSize: 16 }} />
+                {item.location || "Unknown"}
+              </Typography>
             </Box>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleOpenEditItemDialog}
-              sx={{
-                borderColor: "primary.main",
-                color: "primary.main",
-                "&:hover": {
-                  borderColor: "primary.dark",
-                  color: "primary.dark",
-                },
-              }}
-            >
-              Edit
-            </Button>
           </Box>
-          <Box sx={{ mb: 2 }}>
-            <Chip
-              icon={<LocationOnIcon />}
-              label={item.location}
-              variant="outlined"
-              sx={{ mr: 1, mb: 1 }}
-            />
-            <Chip
-              icon={<EventIcon />}
-              label={item.date}
-              variant="outlined"
-              sx={{ mr: 1, mb: 1 }}
-            />
-          </Box>
-          <Typography color="text.secondary" paragraph>
+
+          {/* <Typography color="text.secondary" paragraph>
             {item.description}
-          </Typography>
-          {item.dateSuggestions?.length > 0 && (
+          </Typography> */}
+          {/* {item.dateSuggestions?.length > 0 && (
             <Box sx={{ mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Date Suggestions:
@@ -222,7 +238,7 @@ const BucketListItem = ({
                 />
               ))}
             </Box>
-          )}
+          )} */}
         </Box>
         <Button
           variant="outlined"
@@ -244,9 +260,9 @@ const BucketListItem = ({
           <Button
             startIcon={
               item.upvotes?.includes(currentUser.uid) ? (
-                <ThumbUpIcon />
+                <FavoriteIcon sx={{ color: "primary.main" }} />
               ) : (
-                <ThumbUpOutlinedIcon />
+                <FavoriteBorderIcon sx={{ color: "black" }} />
               )
             }
             onClick={async () => {
@@ -256,6 +272,7 @@ const BucketListItem = ({
                 await onUpvote(item.id, currentUser.uid);
               }
             }}
+            sx={{ color: "black" }}
           >
             {item.upvotes?.length || 0}
           </Button>
@@ -342,6 +359,7 @@ const BucketListItem = ({
             }
             sx={{ mb: 2 }}
           />
+
           <TextField
             fullWidth
             label="Date"
@@ -352,6 +370,21 @@ const BucketListItem = ({
             }
             InputLabelProps={{ shrink: true }}
           />
+
+          <TextField
+            select
+            label="Status"
+            value={editedItem?.status || "idea"}
+            onChange={(e) =>
+              setEditedItem({ ...editedItem, status: e.target.value })
+            }
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="idea">Idea</MenuItem>
+            <MenuItem value="planning">Planning</MenuItem>
+            <MenuItem value="done">Done</MenuItem>
+          </TextField>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
           <Button
