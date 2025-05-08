@@ -11,6 +11,7 @@ import {
   DialogActions,
   TextField,
   IconButton,
+  MenuItem,
 } from "@mui/material";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbUpOutlinedIcon from "@mui/icons-material/ThumbUpOutlined";
@@ -181,6 +182,11 @@ const BucketListItem = ({
               variant="outlined"
               sx={{ mr: 1, mb: 1 }}
             />
+            <Chip
+              label={item.status}
+              variant="outlined"
+              sx={{ mr: 1, mb: 1 }}
+            />
           </Box>
           <Typography color="text.secondary" paragraph>
             {item.description}
@@ -342,6 +348,7 @@ const BucketListItem = ({
             }
             sx={{ mb: 2 }}
           />
+
           <TextField
             fullWidth
             label="Date"
@@ -352,6 +359,21 @@ const BucketListItem = ({
             }
             InputLabelProps={{ shrink: true }}
           />
+
+          <TextField
+            select
+            label="Status"
+            value={editedItem?.status || "idea"}
+            onChange={(e) =>
+              setEditedItem({ ...editedItem, status: e.target.value })
+            }
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="idea">Idea</MenuItem>
+            <MenuItem value="planning">Planning</MenuItem>
+            <MenuItem value="done">Done</MenuItem>
+          </TextField>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
           <Button
