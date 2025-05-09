@@ -146,7 +146,7 @@ export function DatabaseProvider({ children }) {
         groupId,
         createdBy: currentUser.uid,
         createdAt: serverTimestamp(),
-        status: false,
+        status: item.status || "idea",
         dateSuggestions: [],
       });
       return itemRef.id;

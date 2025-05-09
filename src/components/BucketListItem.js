@@ -11,6 +11,10 @@ import {
   DialogActions,
   TextField,
   IconButton,
+  MenuItem,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -21,7 +25,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
 import EditDateSuggestionDialog from "./EditDateSuggestionDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
+import { useDatabase } from "../contexts/DatabaseContext";
 
 const BucketListItem = ({
   item,
@@ -44,8 +51,41 @@ const BucketListItem = ({
   const [editingSuggestionIndex, setEditingSuggestionIndex] = useState(null);
   const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
   const [editedItem, setEditedItem] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentUsers, setCommentUsers] = useState({});
+  const { getUsersByIds } = useDatabase();
 
-  // ensure date is in MM-DD-YYYY format
+  useEffect(() => {
+    if (!item.id) return;
+    
+    const q = query(
+      collection(db, "bucketListItems", item.id, "comments"),
+      orderBy("createdAt", "desc"),
+      limit(2)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const commentData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setComments(commentData);
+
+      // Fetch user info for comments
+      const uids = Array.from(
+        new Set(commentData.map((c) => c.createdBy).filter(Boolean))
+      );
+      if (uids.length > 0) {
+        const users = await getUsersByIds(uids);
+        const map = {};
+        users.forEach((u) => (map[u.id] = u));
+        setCommentUsers(map);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [item.id, getUsersByIds]);
+
   const formatDateForDisplay = (dateStr) => {
     try {
       const date = new Date(dateStr);
@@ -58,7 +98,6 @@ const BucketListItem = ({
     }
   };
 
-  // for firebase reasons,
   const formatDateForInput = (dateStr) => {
     try {
       const [month, day, year] = dateStr.split("-");
@@ -173,13 +212,34 @@ const BucketListItem = ({
             }}
           >
             <Box>
-              <Typography
-                variant="h5"
-                component="h2"
-                sx={{ color: "primary.main", fontWeight: "bold" }}
-              >
-                {item.title}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="h5"
+                  fontWeight="bold"
+                >
+                  {item.title}
+                </Typography>
+                <Chip
+                  label={
+                    <Typography variant="body2">
+                      {typeof item.status === "string"
+                        ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
+                        : "Idea"}
+                    </Typography>
+                  }
+                  size="small"
+                  sx={{
+                    backgroundColor: (theme) => 
+                      item.status === "done" 
+                        ? theme.palette.status.done
+                        : item.status === "planning" 
+                          ? theme.palette.status.planning
+                          : theme.palette.status.idea,
+                    color: "black",
+                    fontWeight: 500,
+                  }}
+                />
+              </Box>
               <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <PersonIcon sx={{ fontSize: 16 }} />
                 {creators[item.id]?.username || "Unknown"}
@@ -249,7 +309,7 @@ const BucketListItem = ({
         >
           Suggest Date
         </Button>
-        <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0, mt: 'auto' }}>
           <Button
             startIcon={
               item.upvotes?.includes(currentUser.uid) ? (
@@ -265,22 +325,44 @@ const BucketListItem = ({
                 await onUpvote(item.id, currentUser.uid);
               }
             }}
-            sx={{ color: "black" }}
+            sx={{ color: "black", minWidth: 0, px: 0.5, mr: 0.5 }}
           >
             {item.upvotes?.length || 0}
           </Button>
-          {upvoters[item.id]?.map((user) => (
-            <Typography key={user.id} variant="caption" sx={{ mr: 1 }}>
-              {user.username}
-            </Typography>
-          ))}
+          <Button
+            startIcon={<ChatBubbleOutlineIcon />}
+            onClick={() => onOpenComments(item.id)}
+            sx={{ color: "black", minWidth: 0, px: 0.5 }}
+          >
+            {commentCount > 0 ? commentCount : ''}
+          </Button>
         </Box>
-        <Button
-          startIcon={<ChatBubbleOutlineIcon />}
-          onClick={() => onOpenComments(item.id)}
-        >
-          Comment {commentCount > 0 && `(${commentCount})`}
-        </Button>
+        {comments.length > 0 && (
+          <List sx={{ py: 0, mt: 1 }}>
+            {comments.map((comment) => (
+              <ListItem key={comment.id} sx={{ py: 0.5 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    width: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    gap: 1
+                  }}
+                >
+                  <Box component="span" sx={{ fontWeight: 500, flexShrink: 0 }}>
+                    {commentUsers[comment.createdBy]?.username || "Unknown"}:
+                  </Box>
+                  <Box component="span" sx={{ color: 'text.secondary' }}>
+                    {comment.text}
+                  </Box>
+                </Typography>
+              </ListItem>
+            ))}
+          </List>
+        )}
       </CardContent>
       <EditDateSuggestionDialog
         open={editDialogOpen}
@@ -352,6 +434,7 @@ const BucketListItem = ({
             }
             sx={{ mb: 2 }}
           />
+
           <TextField
             fullWidth
             label="Date"
@@ -362,6 +445,21 @@ const BucketListItem = ({
             }
             InputLabelProps={{ shrink: true }}
           />
+
+          <TextField
+            select
+            label="Status"
+            value={editedItem?.status || "idea"}
+            onChange={(e) =>
+              setEditedItem({ ...editedItem, status: e.target.value })
+            }
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="idea">Idea</MenuItem>
+            <MenuItem value="planning">Planning</MenuItem>
+            <MenuItem value="done">Done</MenuItem>
+          </TextField>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
           <Button
