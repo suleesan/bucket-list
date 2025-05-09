@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Container,
   Typography,
@@ -13,6 +13,7 @@ import {
   TextField,
   Alert,
   CircularProgress,
+  MenuItem,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useDatabase } from "../contexts/DatabaseContext";
@@ -47,12 +48,14 @@ const BucketList = () => {
     updateBucketListItem,
   } = useDatabase();
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [newItem, setNewItem] = useState({
     title: "",
     description: "",
     location: "",
     date: "",
+    status: "idea",
   });
 
   const [creators, setCreators] = useState({});
@@ -63,7 +66,6 @@ const BucketList = () => {
   const [suggestDateItemId, setSuggestDateItemId] = useState(null);
   const [suggestedDate, setSuggestedDate] = useState("");
 
-  // Comment dialog state
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [commentItemId, setCommentItemId] = useState(null);
 
@@ -162,20 +164,26 @@ const BucketList = () => {
 
     try {
       const newItemId = await createBucketListItem(groupId, newItem);
-      // Create a new item object with the returned ID
+
       const createdItem = {
         id: newItemId,
         ...newItem,
         createdBy: currentUser.uid,
         createdAt: new Date(),
-        status: false,
+        status: newItem.status || "idea",
         dateSuggestions: [],
         upvotes: [],
       };
-      // Update the items state immediately
+
       setItems((prevItems) => [createdItem, ...prevItems]);
-      // Reset form and close dialog
-      setNewItem({ title: "", description: "", location: "", date: "" });
+
+      setNewItem({
+        title: "",
+        description: "",
+        location: "",
+        date: "",
+        status: "idea",
+      });
       setOpenDialog(false);
     } catch (error) {
       setError("Failed to create bucket list item");
@@ -193,7 +201,7 @@ const BucketList = () => {
 
   const handleSubmitSuggestDate = async () => {
     if (!suggestedDate) return;
-    // Format date as MM-DD-YYYY
+
     const [yyyy, mm, dd] = suggestedDate.split("-");
     const formattedDate = `${mm}-${dd}-${yyyy}`;
     try {
@@ -203,7 +211,6 @@ const BucketList = () => {
         votes: [],
       };
 
-      // Update UI optimistically
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === suggestDateItemId
@@ -223,7 +230,6 @@ const BucketList = () => {
       setSuggestDateItemId(null);
       setSuggestedDate("");
     } catch (error) {
-      // Revert optimistic update on error
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === suggestDateItemId
@@ -252,7 +258,7 @@ const BucketList = () => {
   const handleEditItem = async (itemId, editedItem) => {
     try {
       await updateBucketListItem(itemId, editedItem);
-      // Update items optimistically
+
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId ? { ...item, ...editedItem } : item
@@ -264,7 +270,6 @@ const BucketList = () => {
     }
   };
 
-  // Handler to open comment dialog
   const handleOpenComments = (itemId) => {
     setCommentItemId(itemId);
     setCommentDialogOpen(true);
@@ -284,7 +289,6 @@ const BucketList = () => {
 
   const handleDeleteDateSuggestion = async (itemId, suggestionIndex) => {
     try {
-      // Update UI optimistically
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId
@@ -309,11 +313,9 @@ const BucketList = () => {
 
   const handleEditDateSuggestion = async (itemId, suggestionIndex, newDate) => {
     try {
-      // Format date as MM-DD-YYYY
       const [yyyy, mm, dd] = newDate.split("-");
       const formattedDate = `${mm}-${dd}-${yyyy}`;
 
-      // Update UI optimistically
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId
@@ -331,7 +333,6 @@ const BucketList = () => {
 
       await editDateSuggestion(itemId, suggestionIndex, formattedDate);
     } catch (error) {
-      // Revert optimistic update on error
       await loadGroupAndItems();
       setError("Failed to edit date suggestion");
       console.error(error);
@@ -341,7 +342,7 @@ const BucketList = () => {
   const handleDeleteItem = async (itemId) => {
     try {
       await deleteBucketListItem(itemId);
-      await loadGroupAndItems(); // Refresh the list after deletion
+      await loadGroupAndItems();
     } catch (error) {
       setError("Failed to delete bucket list item");
       console.error(error);
@@ -375,18 +376,34 @@ const BucketList = () => {
             {groupName}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-          disabled={loading}
-          sx={{
-            bgcolor: "primary.main",
-            "&:hover": { bgcolor: "primary.dark" },
-          }}
-        >
-          Add Item
-        </Button>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate("/")}
+            sx={{
+              borderColor: "primary.main",
+              color: "primary.main",
+              "&:hover": {
+                borderColor: "primary.dark",
+                color: "primary.dark",
+              },
+            }}
+          >
+            Return to Groups
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenDialog(true)}
+            disabled={loading}
+            sx={{
+              bgcolor: "primary.main",
+              "&:hover": { bgcolor: "primary.dark" },
+            }}
+          >
+            Add Item
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
@@ -437,7 +454,7 @@ const BucketList = () => {
                 }}
                 onRemoveUpvote={async (itemId, userId) => {
                   await removeUpvoteBucketListItem(itemId, userId);
-                  // Update items optimistically
+
                   setItems((prevItems) =>
                     prevItems.map((item) =>
                       item.id === itemId
@@ -487,7 +504,11 @@ const BucketList = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Add New Bucket List Item</DialogTitle>
+        <DialogTitle sx={{ pt: 3 }}>
+          <Typography variant="h5" fontWeight="bold">
+            Add New Bucket List Item
+          </Typography>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
@@ -536,6 +557,20 @@ const BucketList = () => {
               disabled={loading}
               InputLabelProps={{ shrink: true }}
             />
+            <TextField
+              select
+              label="Status"
+              value={newItem.status}
+              onChange={(e) =>
+                setNewItem({ ...newItem, status: e.target.value })
+              }
+              fullWidth
+              sx={{ mt: 2 }}
+            >
+              <MenuItem value="idea">Idea</MenuItem>
+              <MenuItem value="planning">Planning</MenuItem>
+              <MenuItem value="done">Done</MenuItem>
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>

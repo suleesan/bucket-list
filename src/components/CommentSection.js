@@ -81,7 +81,9 @@ const CommentSection = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ m: 0, p: 2 }}>
-        Comments for {itemTitle}
+        <Typography variant="h5" fontWeight="bold">
+          Comments for {itemTitle}
+        </Typography>
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -136,7 +138,10 @@ const CommentSection = ({
                     <Typography>
                       {userMap[comment.createdBy]?.username || "Unknown"}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography 
+                      variant="body2" 
+                      sx={{ color: (theme) => theme.palette.grey[500] }}
+                    >
                       {comment.createdAt?.toDate
                         ? comment.createdAt.toDate().toLocaleString()
                         : ""}

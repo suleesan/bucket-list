@@ -21,7 +21,12 @@ const Navbar = () => {
         <Typography
           variant="h5"
           component="div"
-          sx={{ flexGrow: 1, cursor: "pointer", color: "black" }}
+          sx={{
+            flexGrow: 1,
+            cursor: "pointer",
+            color: "black",
+            fontWeight: "bold",
+          }}
           onClick={() => navigate("/")}
         >
           Rally

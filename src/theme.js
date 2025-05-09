@@ -14,8 +14,13 @@ const theme = createTheme({
       dark: "#3a6d8c",
       contrastText: "#fff",
     },
+    status: {
+      done: "rgba(202, 245, 161, 0.5)",
+      planning: "rgba(255, 230, 179, 0.8)",
+      idea: "rgba(254, 156, 154, 0.37)",
+    },
     background: {
-      default: "#F0F8FF",
+      default: "#FFFFFF",
       paper: "#FFFFFF",
     },
     text: {
