@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Container,
   Typography,
@@ -48,13 +48,14 @@ const BucketList = () => {
     updateBucketListItem,
   } = useDatabase();
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const [newItem, setNewItem] = useState({
     title: "",
     description: "",
     location: "",
     date: "",
-    status: "idea"
+    status: "idea",
   });
 
   const [creators, setCreators] = useState({});
@@ -176,7 +177,13 @@ const BucketList = () => {
 
       setItems((prevItems) => [createdItem, ...prevItems]);
 
-      setNewItem({ title: "", description: "", location: "", date: "", status: "idea" });
+      setNewItem({
+        title: "",
+        description: "",
+        location: "",
+        date: "",
+        status: "idea",
+      });
       setOpenDialog(false);
     } catch (error) {
       setError("Failed to create bucket list item");
@@ -204,7 +211,6 @@ const BucketList = () => {
         votes: [],
       };
 
-
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === suggestDateItemId
@@ -224,7 +230,6 @@ const BucketList = () => {
       setSuggestDateItemId(null);
       setSuggestedDate("");
     } catch (error) {
-
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === suggestDateItemId
@@ -284,7 +289,6 @@ const BucketList = () => {
 
   const handleDeleteDateSuggestion = async (itemId, suggestionIndex) => {
     try {
-      
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId
@@ -309,7 +313,6 @@ const BucketList = () => {
 
   const handleEditDateSuggestion = async (itemId, suggestionIndex, newDate) => {
     try {
-
       const [yyyy, mm, dd] = newDate.split("-");
       const formattedDate = `${mm}-${dd}-${yyyy}`;
 
@@ -330,7 +333,6 @@ const BucketList = () => {
 
       await editDateSuggestion(itemId, suggestionIndex, formattedDate);
     } catch (error) {
-
       await loadGroupAndItems();
       setError("Failed to edit date suggestion");
       console.error(error);
@@ -340,7 +342,7 @@ const BucketList = () => {
   const handleDeleteItem = async (itemId) => {
     try {
       await deleteBucketListItem(itemId);
-      await loadGroupAndItems(); 
+      await loadGroupAndItems();
     } catch (error) {
       setError("Failed to delete bucket list item");
       console.error(error);
@@ -374,18 +376,34 @@ const BucketList = () => {
             {groupName}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-          disabled={loading}
-          sx={{
-            bgcolor: "primary.main",
-            "&:hover": { bgcolor: "primary.dark" },
-          }}
-        >
-          Add Item
-        </Button>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate("/")}
+            sx={{
+              borderColor: "primary.main",
+              color: "primary.main",
+              "&:hover": {
+                borderColor: "primary.dark",
+                color: "primary.dark",
+              },
+            }}
+          >
+            Return to Groups
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenDialog(true)}
+            disabled={loading}
+            sx={{
+              bgcolor: "primary.main",
+              "&:hover": { bgcolor: "primary.dark" },
+            }}
+          >
+            Add Item
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
@@ -543,7 +561,9 @@ const BucketList = () => {
               select
               label="Status"
               value={newItem.status}
-              onChange={(e) => setNewItem({ ...newItem, status: e.target.value })}
+              onChange={(e) =>
+                setNewItem({ ...newItem, status: e.target.value })
+              }
               fullWidth
               sx={{ mt: 2 }}
             >

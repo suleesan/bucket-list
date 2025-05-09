@@ -26,7 +26,13 @@ import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
 import EditDateSuggestionDialog from "./EditDateSuggestionDialog";
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useDatabase } from "../contexts/DatabaseContext";
 
@@ -57,7 +63,7 @@ const BucketListItem = ({
 
   useEffect(() => {
     if (!item.id) return;
-    
+
     const q = query(
       collection(db, "bucketListItems", item.id, "comments"),
       orderBy("createdAt", "desc"),
@@ -167,6 +173,16 @@ const BucketListItem = ({
           height: "200px",
           backgroundColor: "#A0CBCF",
           position: "relative",
+          backgroundImage: (() => {
+            const title = item.title.toLowerCase();
+            if (title === "dunch") return "url('/dunch.png')";
+            if (title === "climb memchu") return "url('/memchu.png')";
+            if (title === "picnic") return "url('/picnic.jpg')";
+            if (title === "yosemite!") return "url('/yosemite.png')";
+            return "none";
+          })(),
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
         <Button
@@ -212,39 +228,43 @@ const BucketListItem = ({
             }}
           >
             <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography
-                  variant="h5"
-                  fontWeight="bold"
-                >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="h5" fontWeight="bold">
                   {item.title}
                 </Typography>
                 <Chip
                   label={
                     <Typography variant="body2">
                       {typeof item.status === "string"
-                        ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
+                        ? item.status.charAt(0).toUpperCase() +
+                          item.status.slice(1)
                         : "Idea"}
                     </Typography>
                   }
                   size="small"
                   sx={{
-                    backgroundColor: (theme) => 
-                      item.status === "done" 
+                    backgroundColor: (theme) =>
+                      item.status === "done"
                         ? theme.palette.status.done
-                        : item.status === "planning" 
-                          ? theme.palette.status.planning
-                          : theme.palette.status.idea,
+                        : item.status === "planning"
+                        ? theme.palette.status.planning
+                        : theme.palette.status.idea,
                     color: "black",
                     fontWeight: 500,
                   }}
                 />
               </Box>
-              <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
+              >
                 <PersonIcon sx={{ fontSize: 16 }} />
                 {creators[item.id]?.username || "Unknown"}
               </Typography>
-              <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
+              >
                 <LocationOnIcon sx={{ fontSize: 16 }} />
                 {item.location || "Unknown"}
               </Typography>
@@ -309,7 +329,7 @@ const BucketListItem = ({
         >
           Suggest Date
         </Button>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0, mt: 'auto' }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0, mt: "auto" }}>
           <Button
             startIcon={
               item.upvotes?.includes(currentUser.uid) ? (
@@ -334,28 +354,28 @@ const BucketListItem = ({
             onClick={() => onOpenComments(item.id)}
             sx={{ color: "black", minWidth: 0, px: 0.5 }}
           >
-            {commentCount > 0 ? commentCount : ''}
+            {commentCount > 0 ? commentCount : ""}
           </Button>
         </Box>
         {comments.length > 0 && (
           <List sx={{ py: 0, mt: 1 }}>
             {comments.map((comment) => (
               <ListItem key={comment.id} sx={{ py: 0.5 }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    width: '100%',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    gap: 1
+                <Typography
+                  variant="body2"
+                  sx={{
+                    width: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    display: "flex",
+                    gap: 1,
                   }}
                 >
                   <Box component="span" sx={{ fontWeight: 500, flexShrink: 0 }}>
                     {commentUsers[comment.createdBy]?.username || "Unknown"}:
                   </Box>
-                  <Box component="span" sx={{ color: 'text.secondary' }}>
+                  <Box component="span" sx={{ color: "text.secondary" }}>
                     {comment.text}
                   </Box>
                 </Typography>

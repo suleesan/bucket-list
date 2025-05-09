@@ -271,6 +271,78 @@ export function DatabaseProvider({ children }) {
     await updateDoc(itemRef, { dateSuggestions });
   };
 
+  const updateGroup = async (groupId, updates) => {
+    try {
+      const groupRef = doc(db, "groups", groupId);
+      await updateDoc(groupRef, updates);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const deleteGroup = async (groupId) => {
+    try {
+      console.log("Starting group deletion for groupId:", groupId);
+
+      // First verify the group exists and user has permission
+      const groupRef = doc(db, "groups", groupId);
+      const groupDoc = await getDoc(groupRef);
+
+      if (!groupDoc.exists()) {
+        throw new Error("Group not found");
+      }
+
+      const groupData = groupDoc.data();
+      if (groupData.createdBy !== currentUser.uid) {
+        throw new Error("You don't have permission to delete this group");
+      }
+
+      // Delete all bucket list items in the group
+      const itemsQuery = query(
+        collection(db, "bucketListItems"),
+        where("groupId", "==", groupId)
+      );
+      const itemsSnapshot = await getDocs(itemsQuery);
+      console.log("Found items to delete:", itemsSnapshot.size);
+
+      // Delete each item and its subcollections
+      for (const itemDoc of itemsSnapshot.docs) {
+        try {
+          // Delete comments subcollection
+          const commentsQuery = query(
+            collection(db, "bucketListItems", itemDoc.id, "comments")
+          );
+          const commentsSnapshot = await getDocs(commentsQuery);
+          console.log(
+            `Deleting ${commentsSnapshot.size} comments for item ${itemDoc.id}`
+          );
+
+          for (const commentDoc of commentsSnapshot.docs) {
+            await deleteDoc(
+              doc(db, "bucketListItems", itemDoc.id, "comments", commentDoc.id)
+            );
+          }
+
+          // Delete the item itself
+          await deleteDoc(doc(db, "bucketListItems", itemDoc.id));
+          console.log("Deleted item:", itemDoc.id);
+        } catch (itemError) {
+          console.error("Error deleting item:", itemDoc.id, itemError);
+          throw new Error(`Failed to delete item: ${itemError.message}`);
+        }
+      }
+
+      // Finally, delete the group
+      await deleteDoc(groupRef);
+      console.log("Successfully deleted group:", groupId);
+
+      return true;
+    } catch (error) {
+      console.error("Error in deleteGroup:", error);
+      throw error;
+    }
+  };
+
   const value = {
     loading,
     createGroup,
@@ -289,6 +361,8 @@ export function DatabaseProvider({ children }) {
     getUsersByIds,
     deleteDateSuggestion,
     editDateSuggestion,
+    updateGroup,
+    deleteGroup,
   };
 
   return (
