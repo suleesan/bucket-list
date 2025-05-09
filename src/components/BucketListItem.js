@@ -12,9 +12,6 @@ import {
   TextField,
   IconButton,
   MenuItem,
-  List,
-  ListItem,
-  ListItemText,
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -254,6 +251,12 @@ const BucketListItem = ({
                   }}
                 />
               </Box>
+              <Typography
+                variant="body2"
+                sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
+              >
+                {item.title}
+              </Typography>
               <Typography
                 variant="body2"
                 sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
