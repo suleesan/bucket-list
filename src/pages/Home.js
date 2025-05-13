@@ -22,10 +22,12 @@ import {
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ImageIcon from "@mui/icons-material/Image";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDatabase } from "../contexts/DatabaseContext";
 import MuiAlert from "@mui/material/Alert";
+import { supabase } from "../supabase";
 
 const Home = () => {
   const [groups, setGroups] = useState([]);
@@ -40,6 +42,10 @@ const Home = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const {
@@ -49,6 +55,8 @@ const Home = () => {
     updateGroup,
     deleteGroup,
     getBucketListItems,
+    getUsersByIds,
+    uploadImage,
   } = useDatabase();
 
   useEffect(() => {
@@ -57,28 +65,49 @@ const Home = () => {
         if (currentUser) {
           setLoading(true);
           const userGroups = await getGroups();
+          console.log("Loaded groups:", userGroups); // Debug log
 
-          // Fetch items for each group
-          const groupsWithItems = await Promise.all(
-            userGroups.map(async (group) => {
-              const items = await getBucketListItems(group.id);
-              // Sort items by date, with items without dates at the end
-              const sortedItems = items.sort((a, b) => {
-                if (!a.date) return 1;
-                if (!b.date) return -1;
-                return new Date(a.date) - new Date(b.date);
-              });
-              return {
-                ...group,
-                items: sortedItems.slice(0, 5), // Get up to 5 items
-              };
-            })
-          );
+          if (!userGroups || userGroups.length === 0) {
+            setGroups([]); // No groups found, but this is not an error
+            setError(""); // Clear any previous error
+          } else {
+            // Fetch items and member details for each group
+            const groupsWithDetails = await Promise.all(
+              userGroups.map(async (group) => {
+                console.log("Processing group:", group); // Debug log
+                // Fetch items
+                const items = await getBucketListItems(group.id);
+                // Sort items by date, with items without dates at the end
+                const sortedItems = items.sort((a, b) => {
+                  if (!a.date) return 1;
+                  if (!b.date) return -1;
+                  return new Date(a.date) - new Date(b.date);
+                });
 
-          setGroups(groupsWithItems);
+                // Fetch member details
+                const { data: members } = await supabase
+                  .from("group_members")
+                  .select("user_id")
+                  .eq("group_id", group.id);
+
+                const memberIds = members.map((m) => m.user_id);
+                const memberDetails = await getUsersByIds(memberIds);
+
+                return {
+                  ...group,
+                  items: sortedItems.slice(0, 5), // Get up to 5 items
+                  memberDetails,
+                };
+              })
+            );
+            console.log("Groups with details:", groupsWithDetails); // Debug log
+            setGroups(groupsWithDetails);
+            setError("");
+          }
         }
       } catch (error) {
         setError("Failed to load groups");
+        setGroups([]);
         console.error(error);
       } finally {
         setLoading(false);
@@ -86,17 +115,46 @@ const Home = () => {
     };
 
     loadGroups();
-  }, [currentUser, getGroups, getBucketListItems]);
+  }, [currentUser, getGroups, getBucketListItems, getUsersByIds]);
+
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewUrl(previewUrl);
+    }
+  };
+
+  const handleEditImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setEditImageFile(file);
+      // Create a preview URL for the image
+      const previewUrl = URL.createObjectURL(file);
+      setEditPreviewUrl(previewUrl);
+      setEditingGroup((prev) => ({ ...prev, image_url: previewUrl }));
+    }
+  };
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
-
     setLoading(true);
     setError("");
 
     try {
-      const groupId = await createGroup(newGroupName);
+      let imageUrl = null;
+      if (imageFile) {
+        imageUrl = await uploadImage(
+          imageFile,
+          `groups/${Date.now()}_${imageFile.name}`
+        );
+      }
+
+      const groupId = await createGroup(newGroupName, imageUrl);
       setNewGroupName("");
+      setImageFile(null);
+      setPreviewUrl(null);
       setShowCreateDialog(false);
       navigate(`/bucket-list/${groupId}`);
     } catch (error) {
@@ -137,8 +195,14 @@ const Home = () => {
   };
 
   const handleCloseEditDialog = () => {
+    // Clean up any blob URLs
+    if (editPreviewUrl) {
+      URL.revokeObjectURL(editPreviewUrl);
+    }
     setEditDialogOpen(false);
     setEditingGroup(null);
+    setEditImageFile(null);
+    setEditPreviewUrl(null);
   };
 
   const handleSaveEdit = async () => {
@@ -148,14 +212,29 @@ const Home = () => {
     setError("");
 
     try {
-      await updateGroup(editingGroup.id, { name: editingGroup.name });
+      let imageUrl = editingGroup.image_url;
+
+      // Only upload if we have a new file (not a blob URL)
+      if (editImageFile && !imageUrl.startsWith("blob:")) {
+        imageUrl = await uploadImage(
+          editImageFile,
+          `groups/${editingGroup.id}_${Date.now()}_${editImageFile.name}`
+        );
+      }
+
+      await updateGroup(editingGroup.id, {
+        name: editingGroup.name,
+        image_url: imageUrl,
+      });
+
       setGroups((prevGroups) =>
         prevGroups.map((group) =>
           group.id === editingGroup.id
-            ? { ...group, name: editingGroup.name }
+            ? { ...group, name: editingGroup.name, image_url: imageUrl }
             : group
         )
       );
+
       handleCloseEditDialog();
     } catch (error) {
       setError("Failed to update group");
@@ -177,19 +256,14 @@ const Home = () => {
     setDeleteConfirmOpen(false);
 
     try {
-      console.log("Attempting to delete group:", editingGroup.id);
       await deleteGroup(editingGroup.id);
-      console.log("Group deleted successfully");
 
-      // Update the UI by removing the deleted group
       setGroups((prevGroups) =>
         prevGroups.filter((group) => group.id !== editingGroup.id)
       );
 
-      // Close the dialog
       handleCloseEditDialog();
 
-      // Show success message
       setDeleteSuccess(true);
     } catch (error) {
       console.error("Error deleting group:", error);
@@ -362,12 +436,11 @@ const Home = () => {
                       height: "250px",
                       backgroundColor: "#A0CBCF",
                       position: "relative",
-                      backgroundImage:
-                        group.name === "Senior Year Bucket List"
-                          ? "url('/friends.png')"
-                          : "none",
+                      backgroundImage: group.image_url
+                        ? `url(${group.image_url})`
+                        : "none",
                       backgroundSize: "cover",
-                      backgroundPosition: "center 60%",
+                      backgroundPosition: "center",
                     }}
                   >
                     <Button
@@ -605,7 +678,36 @@ const Home = () => {
               pattern: ".*",
               inputMode: "text",
             }}
+            sx={{ mb: 2 }}
           />
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<ImageIcon />}
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            Upload Image
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+          </Button>
+          {previewUrl && (
+            <Box
+              sx={{
+                width: "100%",
+                height: "200px",
+                backgroundImage: `url(${previewUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                mb: 2,
+                borderRadius: 1,
+              }}
+            />
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCreateDialog(false)}>Cancel</Button>
@@ -656,6 +758,36 @@ const Home = () => {
               inputMode: "text",
             }}
           />
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<ImageIcon />}
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            Upload Image
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={handleEditImageChange}
+            />
+          </Button>
+          {(editPreviewUrl || editingGroup?.image_url) && (
+            <Box
+              sx={{
+                width: "100%",
+                height: "200px",
+                backgroundImage: `url(${
+                  editPreviewUrl || editingGroup?.image_url
+                })`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                mb: 2,
+                borderRadius: 1,
+              }}
+            />
+          )}
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
           <Button

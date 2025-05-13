@@ -23,116 +23,59 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
-import EditDateSuggestionDialog from "./EditDateSuggestionDialog";
+import ImageIcon from "@mui/icons-material/Image";
 import { useState, useEffect } from "react";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import { useDatabase } from "../contexts/DatabaseContext";
 
 const BucketListItem = ({
   item,
   creators,
   upvoters,
-  dateSuggestionUsers,
+  commentUsers,
   currentUser,
   onEdit,
   onUpvote,
   onRemoveUpvote,
-  openSuggestDateDialog,
-  handleVoteForDate,
   onOpenComments,
-  handleDeleteDateSuggestion,
-  handleEditDateSuggestion,
   onDelete,
   commentCount,
+  onImageUpload,
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingSuggestionIndex, setEditingSuggestionIndex] = useState(null);
   const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
   const [editedItem, setEditedItem] = useState(null);
   const [comments, setComments] = useState([]);
-  const [commentUsers, setCommentUsers] = useState({});
-  const { getUsersByIds } = useDatabase();
+  const [imageFile, setImageFile] = useState(null);
+  const [localCommentUsers, setLocalCommentUsers] = useState({});
+  const [creator, setCreator] = useState(null);
+  const { getComments, getUsersByIds } = useDatabase();
 
+  // Fetch creator's profile
   useEffect(() => {
-    if (!item.id) return;
-
-    const q = query(
-      collection(db, "bucketListItems", item.id, "comments"),
-      orderBy("createdAt", "desc"),
-      limit(2)
-    );
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const commentData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setComments(commentData);
-
-      // Fetch user info for comments
-      const uids = Array.from(
-        new Set(commentData.map((c) => c.createdBy).filter(Boolean))
-      );
-      if (uids.length > 0) {
-        const users = await getUsersByIds(uids);
-        const map = {};
-        users.forEach((u) => (map[u.id] = u));
-        setCommentUsers(map);
+    if (!item.created_by) return;
+    getUsersByIds([item.created_by]).then((users) => {
+      if (users && users.length > 0) {
+        setCreator(users[0]);
       }
     });
+  }, [item.created_by, getUsersByIds]);
 
-    return () => unsubscribe();
-  }, [item.id, getUsersByIds]);
+  // Fetch the latest 2 comments for this item
+  useEffect(() => {
+    if (!item.id) return;
+    getComments(item.id).then(async (data) => {
+      setComments(data.slice(-2)); // Show the last 2 comments
 
-  const formatDateForDisplay = (dateStr) => {
-    try {
-      const date = new Date(dateStr);
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${month}-${day}-${year}`;
-    } catch (error) {
-      return dateStr;
-    }
-  };
-
-  const formatDateForInput = (dateStr) => {
-    try {
-      const [month, day, year] = dateStr.split("-");
-      return `${year}-${month}-${day}`;
-    } catch (error) {
-      return dateStr;
-    }
-  };
-
-  const handleOpenEditDialog = (index, e) => {
-    e.stopPropagation();
-    setEditingSuggestionIndex(index);
-    setEditDialogOpen(true);
-  };
-
-  const handleCloseEditDialog = () => {
-    setEditDialogOpen(false);
-    setEditingSuggestionIndex(null);
-  };
-
-  const handleSaveEdit = (newDate) => {
-    const formattedDate = formatDateForDisplay(newDate);
-    handleEditDateSuggestion(item.id, editingSuggestionIndex, formattedDate);
-    handleCloseEditDialog();
-  };
-
-  const handleDeleteSuggestion = () => {
-    handleDeleteDateSuggestion(item.id, editingSuggestionIndex);
-    handleCloseEditDialog();
-  };
+      // Fetch user info for commenters
+      const userIds = [...new Set(data.map((c) => c.created_by))];
+      const users = await getUsersByIds(userIds);
+      const userMap = {};
+      users.forEach((user) => {
+        userMap[user.id] = user;
+      });
+      setLocalCommentUsers(userMap);
+    });
+  }, [item.id, getComments, getUsersByIds]);
 
   const handleOpenEditItemDialog = () => {
     setEditedItem(item);
@@ -142,16 +85,30 @@ const BucketListItem = ({
   const handleCloseEditItemDialog = () => {
     setEditItemDialogOpen(false);
     setEditedItem(null);
+    setImageFile(null);
   };
 
-  const handleSaveItemEdit = () => {
-    onEdit(item.id, editedItem);
+  const handleSaveItemEdit = async () => {
+    if (imageFile) {
+      await onImageUpload(item.id, imageFile);
+    }
+    onEdit(item.id, { ...editedItem, image_url: editedItem.image_url });
     handleCloseEditItemDialog();
   };
 
   const handleDeleteItem = () => {
     onDelete(item.id);
     handleCloseEditItemDialog();
+  };
+
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Create a preview URL for the image
+      const previewUrl = URL.createObjectURL(file);
+      setEditedItem((prev) => ({ ...prev, image_url: previewUrl }));
+    }
   };
 
   return (
@@ -172,14 +129,7 @@ const BucketListItem = ({
           height: "200px",
           backgroundColor: "#A0CBCF",
           position: "relative",
-          backgroundImage: (() => {
-            const title = item.title.toLowerCase();
-            if (title === "dunch") return "url('/dunch.png')";
-            if (title === "climb memchu") return "url('/memchu.png')";
-            if (title === "picnic") return "url('/picnic.jpg')";
-            if (title === "yosemite!") return "url('/yosemite.png')";
-            return "none";
-          })(),
+          backgroundImage: item.image_url ? `url(${item.image_url})` : "none",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -257,14 +207,8 @@ const BucketListItem = ({
                 variant="body2"
                 sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
               >
-                {item.title}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
-              >
                 <PersonIcon sx={{ fontSize: 16 }} />
-                {creators[item.id]?.username || "Unknown"}
+                {creator?.username || "Unknown"}
               </Typography>
               <Typography
                 variant="body2"
@@ -275,81 +219,21 @@ const BucketListItem = ({
               </Typography>
             </Box>
           </Box>
-
-          {/* <Typography color="text.secondary" paragraph>
-            {item.description}
-          </Typography> */}
-          {/* {item.dateSuggestions?.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Date Suggestions:
-              </Typography>
-              {item.dateSuggestions.map((suggestion, index) => (
-                <Chip
-                  key={index}
-                  label={
-                    <>
-                      {formatDateForDisplay(suggestion.date)}
-                      {suggestion.suggestedBy &&
-                      dateSuggestionUsers[suggestion.suggestedBy]?.username
-                        ? ` • ${
-                            dateSuggestionUsers[suggestion.suggestedBy].username
-                          }`
-                        : ""}
-                    </>
-                  }
-                  onClick={() => currentUser && handleVoteForDate(index)}
-                  sx={{ mr: 1, mb: 1 }}
-                  deleteIcon={
-                    suggestion.suggestedBy === currentUser?.uid ? (
-                      <EditIcon
-                        onClick={(e) => handleOpenEditDialog(index, e)}
-                        sx={{ cursor: "pointer" }}
-                      />
-                    ) : undefined
-                  }
-                  onDelete={
-                    suggestion.suggestedBy === currentUser?.uid
-                      ? (e) => handleOpenEditDialog(index, e)
-                      : undefined
-                  }
-                />
-              ))}
-            </Box>
-          )} */}
         </Box>
-        <Button
-          variant="outlined"
-          fullWidth
-          onClick={() => openSuggestDateDialog(item.id)}
-          sx={{
-            borderColor: "primary.main",
-            color: "primary.main",
-            "&:hover": {
-              borderColor: "primary.dark",
-              color: "primary.dark",
-            },
-            mt: "auto",
-          }}
-        >
-          Suggest Date
-        </Button>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0, mt: "auto" }}>
           <Button
             startIcon={
-              item.upvotes?.includes(currentUser.uid) ? (
+              item.upvotes?.includes(currentUser.id) ? (
                 <FavoriteIcon sx={{ color: "primary.main" }} />
               ) : (
                 <FavoriteBorderIcon sx={{ color: "black" }} />
               )
             }
-            onClick={async () => {
-              if (item.upvotes?.includes(currentUser.uid)) {
-                await onRemoveUpvote(item.id, currentUser.uid);
-              } else {
-                await onUpvote(item.id, currentUser.uid);
-              }
-            }}
+            onClick={() =>
+              item.upvotes?.includes(currentUser.id)
+                ? onRemoveUpvote(item.id)
+                : onUpvote(item.id)
+            }
             sx={{ color: "black", minWidth: 0, px: 0.5, mr: 0.5 }}
           >
             {item.upvotes?.length || 0}
@@ -378,10 +262,12 @@ const BucketListItem = ({
                   }}
                 >
                   <Box component="span" sx={{ fontWeight: 500, flexShrink: 0 }}>
-                    {commentUsers[comment.createdBy]?.username || "Unknown"}:
+                    {localCommentUsers?.[comment.created_by]?.username ||
+                      "Unknown"}
+                    :
                   </Box>
                   <Box component="span" sx={{ color: "text.secondary" }}>
-                    {comment.text}
+                    {comment.content}
                   </Box>
                 </Typography>
               </ListItem>
@@ -389,19 +275,6 @@ const BucketListItem = ({
           </List>
         )}
       </CardContent>
-      <EditDateSuggestionDialog
-        open={editDialogOpen}
-        onClose={handleCloseEditDialog}
-        currentDate={
-          editingSuggestionIndex !== null
-            ? formatDateForInput(
-                item.dateSuggestions[editingSuggestionIndex].date
-              )
-            : ""
-        }
-        onSave={handleSaveEdit}
-        onDelete={handleDeleteSuggestion}
-      />
       <Dialog
         open={editItemDialogOpen}
         onClose={handleCloseEditItemDialog}
@@ -469,6 +342,7 @@ const BucketListItem = ({
               setEditedItem({ ...editedItem, date: e.target.value })
             }
             InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
           />
 
           <TextField
@@ -485,6 +359,35 @@ const BucketListItem = ({
             <MenuItem value="planning">Planning</MenuItem>
             <MenuItem value="done">Done</MenuItem>
           </TextField>
+
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<ImageIcon />}
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            Upload Image
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+          </Button>
+          {editedItem?.image_url && (
+            <Box
+              sx={{
+                width: "100%",
+                height: "200px",
+                backgroundImage: `url(${editedItem.image_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                mb: 2,
+                borderRadius: 1,
+              }}
+            />
+          )}
         </DialogContent>
         <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
           <Button
