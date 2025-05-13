@@ -1,22 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-} from "firebase/auth";
-import { auth } from "../firebase";
-import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
 
 const AuthContext = createContext();
 
@@ -27,58 +10,88 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showCheckEmailMessage, setShowCheckEmailMessage] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setCurrentUser(session?.user || null);
+        setLoading(false);
+      }
+    );
+    // supabase.auth.getUser().then(({ data }) => {
+    //   setCurrentUser(data?.user || null);
+    //   setLoading(false);
+    // });
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
+  // Sign up and create profile
   async function signup(username, email, password) {
-    try {
-      const q = query(
-        collection(db, "users"),
-        where("username", "==", username)
-      );
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        throw new Error("Username already taken");
-      }
+    // Check if username is taken
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
 
-      // Create user with email/password
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+    if (existing) throw new Error("Username already taken");
 
-      // Update the user's display name to be the username
-      await updateProfile(userCredential.user, {
-        displayName: username,
-      });
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
 
-      // Create a user document in Firestore with UID as the document ID
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        email: email,
-        username: username,
-        createdAt: new Date(),
-      });
+    // Create profile immediately after signup
+    const { error: profileError } = await supabase.from("profiles").insert([
+      {
+        id: data.user.id,
+        username,
+      },
+    ]);
 
-      return userCredential.user;
-    } catch (error) {
-      throw error;
+    if (profileError) {
+      console.error("Error creating profile:", profileError);
+      throw new Error("Failed to create profile");
     }
+
+    // Show check email message if confirmation is required
+    setShowCheckEmailMessage(true);
+
+    return data.user;
   }
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+
+    // Check if profile exists
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", data.user.id)
+      .single();
+
+    // If no profile exists, create one
+    if (!profile) {
+      const { error: insertError } = await supabase.from("profiles").insert([
+        {
+          id: data.user.id,
+          username: email.split("@")[0], // Default username from email
+        },
+      ]);
+      if (insertError) throw insertError;
+    }
+
+    return data.user;
   }
 
-  function logout() {
-    return signOut(auth);
+  async function logout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }
 
   const value = {
@@ -86,6 +99,9 @@ export function AuthProvider({ children }) {
     signup,
     login,
     logout,
+    loading,
+    showCheckEmailMessage,
+    setShowCheckEmailMessage,
   };
 
   return (

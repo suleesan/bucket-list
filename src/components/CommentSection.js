@@ -12,17 +12,6 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  serverTimestamp,
-  doc,
-  deleteDoc,
-} from "firebase/firestore";
 import { useDatabase } from "../contexts/DatabaseContext";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -39,43 +28,49 @@ const CommentSection = ({
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [userMap, setUserMap] = useState({});
-  const { getUsersByIds } = useDatabase();
+  const { getComments, addComment, deleteComment, getUsersByIds } =
+    useDatabase();
 
   useEffect(() => {
     if (!itemId) return;
-    const q = query(
-      collection(db, "bucketListItems", itemId, "comments"),
-      orderBy("createdAt", "asc")
-    );
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const commentData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    let isMounted = true;
+    getComments(itemId).then((commentData) => {
+      if (!isMounted) return;
       setComments(commentData);
       onCommentCountChange(itemId, commentData.length);
       // Fetch user info for all unique UIDs
       const uids = Array.from(
-        new Set(commentData.map((c) => c.createdBy).filter(Boolean))
+        new Set(commentData.map((c) => c.created_by).filter(Boolean))
       );
       if (uids.length > 0) {
-        const users = await getUsersByIds(uids);
-        const map = {};
-        users.forEach((u) => (map[u.id] = u));
-        setUserMap(map);
+        getUsersByIds(uids).then((users) => {
+          const map = {};
+          users.forEach((u) => (map[u.id] = u));
+          setUserMap(map);
+        });
       }
     });
-    return () => unsubscribe();
-  }, [itemId, getUsersByIds, onCommentCountChange]);
+    return () => {
+      isMounted = false;
+    };
+  }, [itemId, getComments, getUsersByIds, onCommentCountChange]);
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
-    await addDoc(collection(db, "bucketListItems", itemId, "comments"), {
-      text: newComment,
-      createdBy: currentUser.uid,
-      createdAt: serverTimestamp(),
-    });
+    await addComment(itemId, newComment);
     setNewComment("");
+    // Refresh comments
+    const commentData = await getComments(itemId);
+    setComments(commentData);
+    onCommentCountChange(itemId, commentData.length);
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    await deleteComment(commentId);
+    // Refresh comments
+    const commentData = await getComments(itemId);
+    setComments(commentData);
+    onCommentCountChange(itemId, commentData.length);
   };
 
   return (
@@ -110,21 +105,11 @@ const CommentSection = ({
               alignItems="flex-start"
               key={comment.id}
               secondaryAction={
-                comment.createdBy === currentUser.uid && (
+                comment.created_by === currentUser.id && (
                   <IconButton
                     edge="end"
                     aria-label="delete"
-                    onClick={async () => {
-                      await deleteDoc(
-                        doc(
-                          db,
-                          "bucketListItems",
-                          itemId,
-                          "comments",
-                          comment.id
-                        )
-                      );
-                    }}
+                    onClick={async () => handleDeleteComment(comment.id)}
                     size="small"
                   >
                     <DeleteIcon fontSize="small" />
@@ -136,19 +121,19 @@ const CommentSection = ({
                 primary={
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography>
-                      {userMap[comment.createdBy]?.username || "Unknown"}
+                      {userMap[comment.created_by]?.username || "Unknown"}
                     </Typography>
-                    <Typography 
-                      variant="body2" 
+                    <Typography
+                      variant="body2"
                       sx={{ color: (theme) => theme.palette.grey[500] }}
                     >
-                      {comment.createdAt?.toDate
-                        ? comment.createdAt.toDate().toLocaleString()
+                      {comment.created_at
+                        ? new Date(comment.created_at).toLocaleString()
                         : ""}
                     </Typography>
                   </Box>
                 }
-                secondary={comment.text}
+                secondary={comment.content || comment.text}
               />
             </ListItem>
           ))}

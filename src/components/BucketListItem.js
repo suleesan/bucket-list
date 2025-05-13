@@ -25,14 +25,6 @@ import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
 import EditDateSuggestionDialog from "./EditDateSuggestionDialog";
 import { useState, useEffect } from "react";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import { useDatabase } from "../contexts/DatabaseContext";
 
 const BucketListItem = ({
@@ -40,15 +32,13 @@ const BucketListItem = ({
   creators,
   upvoters,
   dateSuggestionUsers,
+  commentUsers,
   currentUser,
   onEdit,
   onUpvote,
   onRemoveUpvote,
-  openSuggestDateDialog,
-  handleVoteForDate,
+  onAddDateSuggestion,
   onOpenComments,
-  handleDeleteDateSuggestion,
-  handleEditDateSuggestion,
   onDelete,
   commentCount,
 }) => {
@@ -57,39 +47,15 @@ const BucketListItem = ({
   const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
   const [editedItem, setEditedItem] = useState(null);
   const [comments, setComments] = useState([]);
-  const [commentUsers, setCommentUsers] = useState({});
-  const { getUsersByIds } = useDatabase();
+  const { getComments, getUsersByIds } = useDatabase();
 
+  // Fetch the latest 2 comments for this item
   useEffect(() => {
     if (!item.id) return;
-
-    const q = query(
-      collection(db, "bucketListItems", item.id, "comments"),
-      orderBy("createdAt", "desc"),
-      limit(2)
-    );
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const commentData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setComments(commentData);
-
-      // Fetch user info for comments
-      const uids = Array.from(
-        new Set(commentData.map((c) => c.createdBy).filter(Boolean))
-      );
-      if (uids.length > 0) {
-        const users = await getUsersByIds(uids);
-        const map = {};
-        users.forEach((u) => (map[u.id] = u));
-        setCommentUsers(map);
-      }
+    getComments(item.id).then((data) => {
+      setComments(data.slice(-2)); // Show the last 2 comments
     });
-
-    return () => unsubscribe();
-  }, [item.id, getUsersByIds]);
+  }, [item.id, getComments]);
 
   const formatDateForDisplay = (dateStr) => {
     try {
@@ -124,13 +90,14 @@ const BucketListItem = ({
   };
 
   const handleSaveEdit = (newDate) => {
-    const formattedDate = formatDateForDisplay(newDate);
-    handleEditDateSuggestion(item.id, editingSuggestionIndex, formattedDate);
+    // You can call a handler passed from BucketList.js for updating date suggestions
+    // onUpdateDateSuggestion(item.id, editingSuggestionIndex, newDate);
     handleCloseEditDialog();
   };
 
   const handleDeleteSuggestion = () => {
-    handleDeleteDateSuggestion(item.id, editingSuggestionIndex);
+    // You can call a handler passed from BucketList.js for deleting date suggestions
+    // onDeleteDateSuggestion(item.id, editingSuggestionIndex);
     handleCloseEditDialog();
   };
 
@@ -318,10 +285,10 @@ const BucketListItem = ({
             </Box>
           )} */}
         </Box>
-        <Button
+        {/* <Button
           variant="outlined"
           fullWidth
-          onClick={() => openSuggestDateDialog(item.id)}
+          onClick={() => onAddDateSuggestion(item.id)}
           sx={{
             borderColor: "primary.main",
             color: "primary.main",
@@ -333,23 +300,21 @@ const BucketListItem = ({
           }}
         >
           Suggest Date
-        </Button>
+        </Button> */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 0, mt: "auto" }}>
           <Button
             startIcon={
-              item.upvotes?.includes(currentUser.uid) ? (
+              item.upvotes?.includes(currentUser.id) ? (
                 <FavoriteIcon sx={{ color: "primary.main" }} />
               ) : (
                 <FavoriteBorderIcon sx={{ color: "black" }} />
               )
             }
-            onClick={async () => {
-              if (item.upvotes?.includes(currentUser.uid)) {
-                await onRemoveUpvote(item.id, currentUser.uid);
-              } else {
-                await onUpvote(item.id, currentUser.uid);
-              }
-            }}
+            onClick={() =>
+              item.upvotes?.includes(currentUser.id)
+                ? onRemoveUpvote(item.id)
+                : onUpvote(item.id)
+            }
             sx={{ color: "black", minWidth: 0, px: 0.5, mr: 0.5 }}
           >
             {item.upvotes?.length || 0}
@@ -378,10 +343,10 @@ const BucketListItem = ({
                   }}
                 >
                   <Box component="span" sx={{ fontWeight: 500, flexShrink: 0 }}>
-                    {commentUsers[comment.createdBy]?.username || "Unknown"}:
+                    {commentUsers?.[comment.createdBy]?.username || "Unknown"}:
                   </Box>
                   <Box component="span" sx={{ color: "text.secondary" }}>
-                    {comment.text}
+                    {comment.content}
                   </Box>
                 </Typography>
               </ListItem>

@@ -21,8 +21,7 @@ import { useAuth } from "../contexts/AuthContext";
 import BucketListItem from "../components/BucketListItem";
 import SuggestDateDialog from "../components/SuggestDateDialog";
 import CommentSection from "../components/CommentSection";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
 
 const BucketList = () => {
   const { groupId } = useParams();
@@ -37,13 +36,12 @@ const BucketList = () => {
     createBucketListItem,
     getBucketListItems,
     addDateSuggestion,
-    voteForDate,
     getGroup,
     getUsersByIds,
     upvoteBucketListItem,
     removeUpvoteBucketListItem,
     deleteDateSuggestion,
-    editDateSuggestion,
+    updateDateSuggestion,
     deleteBucketListItem,
     updateBucketListItem,
   } = useDatabase();
@@ -71,19 +69,40 @@ const BucketList = () => {
 
   const [commentCounts, setCommentCounts] = useState({});
 
+  const [commentUsers, setCommentUsers] = useState({});
+
   const fetchCommentCounts = async (items) => {
     const counts = {};
     for (const item of items) {
-      const commentsRef = collection(
-        db,
-        "bucketListItems",
-        item.id,
-        "comments"
-      );
-      const snapshot = await getDocs(commentsRef);
-      counts[item.id] = snapshot.size;
+      const { count, error } = await supabase
+        .from("comments")
+        .select("*", { count: "exact", head: true })
+        .eq("item_id", item.id);
+      counts[item.id] = count || 0;
     }
     setCommentCounts(counts);
+  };
+
+  const fetchCommentUsers = async (items) => {
+    const allCommenters = new Set();
+    for (const item of items) {
+      const { data: comments } = await supabase
+        .from("comments")
+        .select("createdBy")
+        .eq("item_id", item.id);
+      comments?.forEach((c) => allCommenters.add(c.createdBy));
+    }
+    const userIds = Array.from(allCommenters).filter(Boolean);
+    if (userIds.length > 0) {
+      const users = await getUsersByIds(userIds);
+      const userMap = {};
+      users.forEach((user) => {
+        userMap[user.id] = user;
+      });
+      setCommentUsers(userMap);
+    } else {
+      setCommentUsers({});
+    }
   };
 
   const loadGroupAndItems = async () => {
@@ -94,6 +113,7 @@ const BucketList = () => {
       const groupItems = await getBucketListItems(groupId);
       setItems(groupItems);
       await fetchCommentCounts(groupItems);
+      await fetchCommentUsers(groupItems);
     } catch (error) {
       setError("Failed to load group and items");
       console.error(error);
@@ -245,12 +265,61 @@ const BucketList = () => {
     }
   };
 
-  const handleVoteForDate = async (itemId, suggestionIndex) => {
+  const handleUpvote = async (itemId) => {
     try {
-      await voteForDate(itemId, suggestionIndex);
-      await loadGroupAndItems();
+      await upvoteBucketListItem(itemId);
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId
+            ? { ...item, upvotes: [...(item.upvotes || []), currentUser.id] }
+            : item
+        )
+      );
     } catch (error) {
-      setError("Failed to vote for date");
+      setError("Failed to upvote item");
+      console.error(error);
+    }
+  };
+
+  const handleRemoveUpvote = async (itemId) => {
+    try {
+      await removeUpvoteBucketListItem(itemId);
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                upvotes: (item.upvotes || []).filter(
+                  (id) => id !== currentUser.id
+                ),
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      setError("Failed to remove upvote");
+      console.error(error);
+    }
+  };
+
+  const handleAddDateSuggestion = async (itemId, date) => {
+    try {
+      await addDateSuggestion(itemId, date);
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                dateSuggestions: [
+                  ...(item.dateSuggestions || []),
+                  { date, suggested_by: currentUser.id },
+                ],
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      setError("Failed to add date suggestion");
       console.error(error);
     }
   };
@@ -311,7 +380,11 @@ const BucketList = () => {
     }
   };
 
-  const handleEditDateSuggestion = async (itemId, suggestionIndex, newDate) => {
+  const handleUpdateDateSuggestion = async (
+    itemId,
+    suggestionIndex,
+    newDate
+  ) => {
     try {
       const [yyyy, mm, dd] = newDate.split("-");
       const formattedDate = `${mm}-${dd}-${yyyy}`;
@@ -331,7 +404,7 @@ const BucketList = () => {
         )
       );
 
-      await editDateSuggestion(itemId, suggestionIndex, formattedDate);
+      await updateDateSuggestion(itemId, suggestionIndex, formattedDate);
     } catch (error) {
       await loadGroupAndItems();
       setError("Failed to edit date suggestion");
@@ -436,43 +509,13 @@ const BucketList = () => {
                 creators={creators}
                 upvoters={upvoters}
                 dateSuggestionUsers={dateSuggestionUsers}
+                commentUsers={commentUsers}
                 currentUser={currentUser}
                 onEdit={handleEditItem}
-                onUpvote={async (itemId, userId) => {
-                  await upvoteBucketListItem(itemId, userId);
-                  // Update items optimistically
-                  setItems((prevItems) =>
-                    prevItems.map((item) =>
-                      item.id === itemId
-                        ? {
-                            ...item,
-                            upvotes: [...(item.upvotes || []), userId],
-                          }
-                        : item
-                    )
-                  );
-                }}
-                onRemoveUpvote={async (itemId, userId) => {
-                  await removeUpvoteBucketListItem(itemId, userId);
-
-                  setItems((prevItems) =>
-                    prevItems.map((item) =>
-                      item.id === itemId
-                        ? {
-                            ...item,
-                            upvotes: (item.upvotes || []).filter(
-                              (id) => id !== userId
-                            ),
-                          }
-                        : item
-                    )
-                  );
-                }}
-                openSuggestDateDialog={openSuggestDateDialog}
-                handleVoteForDate={handleVoteForDate}
+                onUpvote={handleUpvote}
+                onRemoveUpvote={handleRemoveUpvote}
+                onAddDateSuggestion={handleAddDateSuggestion}
                 onOpenComments={handleOpenComments}
-                handleDeleteDateSuggestion={handleDeleteDateSuggestion}
-                handleEditDateSuggestion={handleEditDateSuggestion}
                 onDelete={handleDeleteItem}
                 commentCount={commentCounts[item.id] || 0}
               />

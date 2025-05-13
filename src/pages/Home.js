@@ -58,27 +58,33 @@ const Home = () => {
           setLoading(true);
           const userGroups = await getGroups();
 
-          // Fetch items for each group
-          const groupsWithItems = await Promise.all(
-            userGroups.map(async (group) => {
-              const items = await getBucketListItems(group.id);
-              // Sort items by date, with items without dates at the end
-              const sortedItems = items.sort((a, b) => {
-                if (!a.date) return 1;
-                if (!b.date) return -1;
-                return new Date(a.date) - new Date(b.date);
-              });
-              return {
-                ...group,
-                items: sortedItems.slice(0, 5), // Get up to 5 items
-              };
-            })
-          );
-
-          setGroups(groupsWithItems);
+          if (!userGroups || userGroups.length === 0) {
+            setGroups([]); // No groups found, but this is not an error
+            setError(""); // Clear any previous error
+          } else {
+            // Fetch items for each group
+            const groupsWithItems = await Promise.all(
+              userGroups.map(async (group) => {
+                const items = await getBucketListItems(group.id);
+                // Sort items by date, with items without dates at the end
+                const sortedItems = items.sort((a, b) => {
+                  if (!a.date) return 1;
+                  if (!b.date) return -1;
+                  return new Date(a.date) - new Date(b.date);
+                });
+                return {
+                  ...group,
+                  items: sortedItems.slice(0, 5), // Get up to 5 items
+                };
+              })
+            );
+            setGroups(groupsWithItems);
+            setError("");
+          }
         }
       } catch (error) {
         setError("Failed to load groups");
+        setGroups([]);
         console.error(error);
       } finally {
         setLoading(false);
@@ -90,7 +96,6 @@ const Home = () => {
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
-
     setLoading(true);
     setError("");
 
@@ -177,19 +182,14 @@ const Home = () => {
     setDeleteConfirmOpen(false);
 
     try {
-      console.log("Attempting to delete group:", editingGroup.id);
       await deleteGroup(editingGroup.id);
-      console.log("Group deleted successfully");
 
-      // Update the UI by removing the deleted group
       setGroups((prevGroups) =>
         prevGroups.filter((group) => group.id !== editingGroup.id)
       );
 
-      // Close the dialog
       handleCloseEditDialog();
 
-      // Show success message
       setDeleteSuccess(true);
     } catch (error) {
       console.error("Error deleting group:", error);
