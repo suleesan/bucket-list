@@ -39,12 +39,14 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signup, login } = useAuth();
+  const { signup, login, showCheckEmailMessage, setShowCheckEmailMessage } =
+    useAuth();
   const navigate = useNavigate();
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
     setError("");
+    setShowCheckEmailMessage(false);
   };
 
   const handleSubmit = async (e) => {
@@ -65,7 +67,7 @@ const Login = () => {
           throw new Error("Password must be at least 6 characters long");
         }
         await signup(username, email, password);
-        navigate("/");
+        // Do NOT navigate to "/" after sign up; show check email message instead
       } else {
         // Log in
         if (!email || !password) {
@@ -142,6 +144,11 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {showCheckEmailMessage && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Check your email to finish authenticating!
+            </Alert>
+          )}
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
