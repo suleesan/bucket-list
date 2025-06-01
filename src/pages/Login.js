@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Container,
   Paper,
@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { styled } from "@mui/material/styles";
+import { supabase } from "../supabase";
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -42,6 +43,18 @@ const Login = () => {
   const { signup, login, showCheckEmailMessage, setShowCheckEmailMessage } =
     useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkEmailConfirmation = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user?.email_confirmed_at) {
+        navigate("/");
+      }
+    };
+    checkEmailConfirmation();
+  }, [navigate]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);

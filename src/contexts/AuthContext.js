@@ -14,15 +14,16 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setCurrentUser(session?.user || null);
+      async (event, session) => {
+        if (event === "SIGNED_IN") {
+          setCurrentUser(session?.user || null);
+        } else if (event === "SIGNED_OUT") {
+          setCurrentUser(null);
+        }
         setLoading(false);
       }
     );
-    // supabase.auth.getUser().then(({ data }) => {
-    //   setCurrentUser(data?.user || null);
-    //   setLoading(false);
-    // });
+
     return () => {
       listener?.subscription.unsubscribe();
     };
@@ -39,7 +40,13 @@ export function AuthProvider({ children }) {
 
     if (existing) throw new Error("Username already taken");
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    });
     if (error) throw error;
 
     // Create profile immediately after signup
