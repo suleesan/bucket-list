@@ -14,6 +14,9 @@ export function DatabaseProvider({ children }) {
   // GROUPS
   const createGroup = async (name, imageUrl = null) => {
     try {
+      // Generate a unique group code
+      const code = generateGroupCode();
+
       const { data, error } = await supabase
         .from("groups")
         .insert([
@@ -21,6 +24,7 @@ export function DatabaseProvider({ children }) {
             name,
             image_url: imageUrl,
             created_by: currentUser.id,
+            code, // Add the generated code
           },
         ])
         .select()
@@ -89,14 +93,55 @@ export function DatabaseProvider({ children }) {
   }
 
   async function joinGroupByCode(code) {
-    const { data, error } = await supabase
-      .from("groups")
-      .select("id")
-      .eq("code", code)
-      .single();
-    if (error || !data) throw new Error("Invalid group code");
-    await addGroupMember(data.id, currentUser.id);
-    return data.id;
+    try {
+      // Find the group by code first
+      const { data: groups, error: groupError } = await supabase
+        .from("groups")
+        .select("id")
+        .eq("code", code);
+
+      if (groupError) {
+        console.error("Error finding group:", groupError);
+        throw new Error("Failed to find group");
+      }
+
+      if (!groups || groups.length === 0) {
+        console.error("No group found with code:", code);
+        throw new Error("Invalid group code");
+      }
+
+      const group = groups[0];
+
+      // Check if user is already a member
+      const { data: memberships, error: membershipError } = await supabase
+        .from("group_members")
+        .select("group_id")
+        .eq("user_id", currentUser.id)
+        .eq("group_id", group.id);
+
+      if (membershipError) {
+        console.error("Error checking membership:", membershipError);
+        throw new Error("Failed to check group membership");
+      }
+
+      if (memberships && memberships.length > 0) {
+        throw new Error("You are already a member of this group");
+      }
+
+      // Add user to group
+      const { error: joinError } = await supabase
+        .from("group_members")
+        .insert([{ group_id: group.id, user_id: currentUser.id }]);
+
+      if (joinError) {
+        console.error("Error joining group:", joinError);
+        throw new Error("Failed to join group");
+      }
+      return group.id;
+    } catch (error) {
+      console.error("Error in joinGroupByCode:", error);
+      throw error;
+    }
   }
 
   // BUCKET LIST ITEMS

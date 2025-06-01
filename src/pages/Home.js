@@ -57,6 +57,7 @@ const Home = () => {
     getBucketListItems,
     getUsersByIds,
     uploadImage,
+    onImageUpload,
   } = useDatabase();
 
   useEffect(() => {
@@ -195,7 +196,6 @@ const Home = () => {
   };
 
   const handleCloseEditDialog = () => {
-    // Clean up any blob URLs
     if (editPreviewUrl) {
       URL.revokeObjectURL(editPreviewUrl);
     }
@@ -212,25 +212,30 @@ const Home = () => {
     setError("");
 
     try {
-      let imageUrl = editingGroup.image_url;
-
-      // Only upload if we have a new file (not a blob URL)
-      if (editImageFile && !imageUrl.startsWith("blob:")) {
+      let imageUrl;
+      if (editImageFile) {
         imageUrl = await uploadImage(
           editImageFile,
           `groups/${editingGroup.id}_${Date.now()}_${editImageFile.name}`
         );
+        await updateGroup(editingGroup.id, {
+          name: editingGroup.name,
+          image_url: imageUrl,
+        });
+      } else {
+        await updateGroup(editingGroup.id, {
+          name: editingGroup.name,
+        });
       }
-
-      await updateGroup(editingGroup.id, {
-        name: editingGroup.name,
-        image_url: imageUrl,
-      });
 
       setGroups((prevGroups) =>
         prevGroups.map((group) =>
           group.id === editingGroup.id
-            ? { ...group, name: editingGroup.name, image_url: imageUrl }
+            ? {
+                ...group,
+                name: editingGroup.name,
+                image_url: editImageFile ? imageUrl : group.image_url,
+              }
             : group
         )
       );
