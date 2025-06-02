@@ -136,7 +136,6 @@ const BucketListItem = ({
         },
       }}
     >
-      {console.log(`Image URL for item ${item.title}:`, item.image_url)}
       <Box
         sx={{
           height: "200px",

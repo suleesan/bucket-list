@@ -14,7 +14,6 @@ export function DatabaseProvider({ children }) {
   // GROUPS
   const createGroup = async (name, imageUrl = null) => {
     try {
-      // Generate a unique group code
       const code = generateGroupCode();
 
       const { data, error } = await supabase
@@ -182,9 +181,24 @@ export function DatabaseProvider({ children }) {
   }
 
   async function updateBucketListItem(itemId, updates) {
+    const allowedFields = [
+      "title",
+      "description",
+      "location",
+      "date",
+      "status",
+      "image_url",
+    ];
+    const filteredUpdates = Object.keys(updates)
+      .filter((key) => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = updates[key];
+        return obj;
+      }, {});
+
     const { error } = await supabase
       .from("bucket_list_items")
-      .update(updates)
+      .update(filteredUpdates)
       .eq("id", itemId);
     if (error) throw error;
   }
@@ -325,31 +339,52 @@ export function DatabaseProvider({ children }) {
 
   const uploadImage = async (file, path) => {
     try {
-      // Ensure the path starts with either 'groups/' or 'items/'
       if (!path.startsWith("groups/") && !path.startsWith("items/")) {
         throw new Error(
           'Image path must start with either "groups/" or "items/"'
         );
       }
 
+      // remove file if it exists
+      try {
+        await supabase.storage.from("bucket-list-images").remove([path]);
+      } catch (removeError) {}
+
+      // upload new file
       const { data, error } = await supabase.storage
         .from("bucket-list-images")
         .upload(path, file, {
           cacheControl: "3600",
-          upsert: true,
+          upsert: false, // CHANGED FROM TRUE!!
         });
 
       if (error) {
-        console.error("Error:", error);
+        // keep just in case for future ref
+        console.error("Supabase storage error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          statusCode: error.statusCode,
+        });
         throw error;
       }
+
       const {
         data: { publicUrl },
       } = supabase.storage.from("bucket-list-images").getPublicUrl(path);
 
       return publicUrl;
     } catch (error) {
-      console.error("Error uploading image");
+      // keep just in case for future ref
+      console.error("Error uploading image:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        statusCode: error.statusCode,
+        stack: error.stack,
+      });
       throw error;
     }
   };
