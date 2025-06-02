@@ -338,12 +338,7 @@ const BucketListItem = ({
                     </Typography>
                   );
                 }
-                if (
-                  upvotes?.length > 2 &&
-                  upvArr.length === upvotes.length &&
-                  upvArr[0]?.id === upvotes[0] &&
-                  upvArr[0]?.username
-                ) {
+                if (upvotes?.length > 2 && upvArr[0]?.username) {
                   return (
                     <Typography
                       variant="body2"
