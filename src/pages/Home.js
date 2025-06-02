@@ -423,7 +423,7 @@ const Home = () => {
                   <Box
                     sx={{
                       height: "250px",
-                      backgroundColor: "#A0CBCF",
+                      backgroundColor: "background.default",
                       position: "relative",
                       backgroundImage: group.image_url
                         ? `url(${group.image_url})`
@@ -471,7 +471,6 @@ const Home = () => {
                         variant="h5"
                         component="h2"
                         sx={{
-                          color: "black",
                           fontWeight: "bold",
                         }}
                       >
@@ -489,11 +488,9 @@ const Home = () => {
                     </Box>
                     <Box sx={{ mb: 2 }}>
                       <Typography
-                        variant="h6"
+                        variant="subtitle1"
                         sx={{
-                          fontWeight: "bold",
                           mb: 1,
-                          color: "black",
                         }}
                       >
                         Group Information
@@ -512,7 +509,7 @@ const Home = () => {
                         >
                           Code:
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2">
                           {group.code}
                         </Typography>
                       </Box>
@@ -520,7 +517,7 @@ const Home = () => {
                         <Typography
                           variant="body2"
                           gutterBottom
-                          sx={{ fontWeight: "bold", color: "black" }}
+                          sx={{ fontWeight: "bold" }}
                         >
                           Members:
                         </Typography>
@@ -532,8 +529,7 @@ const Home = () => {
                               key={member.id}
                               variant="body2"
                               sx={{
-                                bgcolor: "primary.light",
-                                color: "primary.contrastText",
+                                bgcolor: "background.default",
                                 px: 1,
                                 py: 0.5,
                                 borderRadius: 1,
@@ -548,11 +544,9 @@ const Home = () => {
                     {group.items && group.items.length > 0 && (
                       <Box sx={{ mt: 2 }}>
                         <Typography
-                          variant="h6"
+                          variant="subtitle1"
                           sx={{
-                            fontWeight: "bold",
                             mb: 1,
-                            color: "black",
                           }}
                         >
                           Upcoming Events
@@ -561,7 +555,7 @@ const Home = () => {
                           <Box
                             key={item.id}
                             sx={{
-                              backgroundColor: "primary.light",
+                              backgroundColor: "background.default",
                               borderRadius: 1,
                               p: 1.5,
                               mb: 1,
@@ -576,21 +570,12 @@ const Home = () => {
                             >
                               <Typography
                                 variant="subtitle1"
-                                sx={{
-                                  fontWeight: "medium",
-                                  color: "primary.contrastText",
-                                }}
                               >
                                 {item.title}
                               </Typography>
                               {item.date && (
                                 <Typography
                                   variant="body2"
-                                  sx={{
-                                    color: "primary.contrastText",
-                                    opacity: 0.9,
-                                    ml: 1,
-                                  }}
                                 >
                                   {new Date(item.date).toLocaleDateString()}
                                 </Typography>

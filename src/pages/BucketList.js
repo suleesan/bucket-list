@@ -14,8 +14,10 @@ import {
   Alert,
   CircularProgress,
   MenuItem,
+  IconButton,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import { useDatabase } from "../contexts/DatabaseContext";
 import { useAuth } from "../contexts/AuthContext";
 import BucketListItem from "../components/BucketListItem";
@@ -74,6 +76,8 @@ const BucketList = () => {
 
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const fetchCommentCounts = async (items) => {
     const counts = {};
@@ -461,6 +465,11 @@ const BucketList = () => {
     }
   };
 
+  // Filter items based on status
+  const filteredItems = statusFilter === "all" 
+    ? items 
+    : items.filter(item => item.status === statusFilter);
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       {error && (
@@ -474,7 +483,7 @@ const BucketList = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          mb: 4,
+          mb: 2,
         }}
       >
         <Box>
@@ -518,6 +527,29 @@ const BucketList = () => {
         </Box>
       </Box>
 
+      {/* Status Filter Buttons */}
+      <Box sx={{ mb: 4, display: "flex", gap: 1 }}>
+        {["all", "idea", "planning", "done"].map((status) => (
+          <Button
+            key={status}
+            variant={statusFilter === status ? "contained" : "text"}
+            onClick={() => setStatusFilter(status)}
+            sx={{
+              textTransform: "capitalize",
+              color: statusFilter === status ? "white" : "black",
+              backgroundColor: statusFilter === status ? "black" : "transparent",
+              "&:hover": {
+                backgroundColor: statusFilter === status ? "#4A4A4A" : "rgba(0, 0, 0, 0.1)",
+                color: statusFilter === status ? "white" : "black",
+              },
+              fontWeight: statusFilter === status ? "bold" : "normal",
+            }}
+          >
+            {status === "all" ? "All" : status}
+          </Button>
+        ))}
+      </Box>
+
       {loading ? (
         <Box
           sx={{
@@ -530,18 +562,21 @@ const BucketList = () => {
         >
           <CircularProgress />
         </Box>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <Grid>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No bucket list items yet
+          <Typography variant="subtitle1" color="primary.main" gutterBottom>
+            {statusFilter === "all" ? "No bucket list items yet" : `No ${statusFilter} items found`}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Click the "Add Item" button to create your first bucket list item
+          <Typography variant="body2" color="primary.main">
+            {statusFilter === "all" 
+              ? 'Click the "Add Item" button to create your first bucket list item'
+              : `Try selecting a different filter or add a new ${statusFilter} item`
+            }
           </Typography>
         </Grid>
       ) : (
         <Grid container spacing={3}>
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <Grid size={{ xs: 6, sm: 3 }} key={item.id}>
               <BucketListItem
                 item={item}
@@ -587,12 +622,25 @@ const BucketList = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ pt: 3 }}>
-          <Typography variant="h6" fontWeight="bold">
+        <DialogTitle sx={{ m: 0, p: 2 }}>
+          <Typography variant="subtitle1">
             Add New Bucket List Item
           </Typography>
+          <IconButton
+            aria-label="close"
+            onClick={() => setOpenDialog(false)}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+            size="large"
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent dividers>
           <Box sx={{ pt: 2 }}>
             <TextField
               fullWidth
@@ -680,7 +728,7 @@ const BucketList = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Edit Bucket List Item</DialogTitle>
+        <DialogTitle sx={{ color: 'black' }}>Edit Bucket List Item</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField

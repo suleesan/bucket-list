@@ -140,7 +140,7 @@ const BucketListItem = ({
       <Box
         sx={{
           height: "200px",
-          backgroundColor: "#A0CBCF",
+          backgroundColor: 'background.default',
           position: "relative",
           backgroundImage: item.image_url ? `url(${item.image_url})` : "none",
           backgroundSize: "cover",
@@ -191,7 +191,7 @@ const BucketListItem = ({
           >
             <Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="h5" fontWeight="bold">
+                <Typography variant="subtitle1">
                   {item.title}
                 </Typography>
                 <Chip
@@ -424,7 +424,7 @@ const BucketListItem = ({
         {comments.length > 0 && (
           <List sx={{ py: 0, mt: 1 }}>
             {comments.map((comment) => (
-              <ListItem key={comment.id} sx={{ py: 0.5 }}>
+              <ListItem key={comment.id} sx={{ py: 0.5, pl: 0 }}>
                 <Typography
                   variant="body2"
                   sx={{
@@ -441,7 +441,7 @@ const BucketListItem = ({
                       "Unknown"}
                     :
                   </Box>
-                  <Box component="span" sx={{ color: "text.secondary" }}>
+                  <Box component="span">
                     {comment.content}
                   </Box>
                 </Typography>
@@ -501,7 +501,9 @@ const BucketListItem = ({
         fullWidth
       >
         <DialogTitle sx={{ m: 0, p: 2 }}>
-          Edit Bucket List Item
+          <Typography variant="subtitle1">
+            Edit Bucket List Item
+          </Typography>
           <IconButton
             aria-label="close"
             onClick={handleCloseEditItemDialog}

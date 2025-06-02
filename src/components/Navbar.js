@@ -30,7 +30,7 @@ const Navbar = () => {
   }, [currentUser, getUser]);
 
   return (
-    <AppBar position="static" color="primary" elevation={0}>
+    <AppBar position="static" elevation={0} sx={{ backgroundColor: 'white' }}>
       <Toolbar>
         <Typography
           variant="h5"
@@ -43,7 +43,7 @@ const Navbar = () => {
           }}
           onClick={() => navigate("/")}
         >
-          Rally
+          Rally 💫
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           {currentUser ? (
@@ -51,12 +51,28 @@ const Navbar = () => {
               <Typography variant="body1" sx={{ mr: 2, color: "black" }}>
                 {profile?.username || "User"}
               </Typography>
-              <Button color="inherit" onClick={handleLogout}>
+              <Button 
+                onClick={handleLogout}
+                sx={{
+                  color: "black",
+                  fontSize: "1rem",
+                  fontFamily: '"Figtree", sans-serif',
+                  fontWeight: "normal",
+                  textTransform: "none",
+                }}
+              >
                 Logout
               </Button>
             </>
           ) : (
-            <Button color="inherit" onClick={() => navigate("/login")}>
+            <Button 
+              variant="contained"
+              onClick={() => navigate("/login")}
+              sx={{
+                bgcolor: "primary.main",
+                "&:hover": { bgcolor: "primary.dark" },
+              }}
+            >
               Get Started
             </Button>
           )}

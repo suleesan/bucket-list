@@ -3,10 +3,10 @@ import { createTheme } from "@mui/material/styles";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#a0cccf",
-      light: "#d2f1f3",
-      dark: "#6b9fa1",
-      contrastText: "#222",
+      main: "#000000",
+      light: "#4A4A4A",
+      dark: "#000000",
+      contrastText: "#FFFFFF",
     },
     secondary: {
       main: "#5d9cc0",
@@ -20,12 +20,12 @@ const theme = createTheme({
       idea: "rgba(254, 156, 154, 0.37)",
     },
     background: {
-      default: "#FFFFFF",
-      paper: "#FFFFFF",
+      default: "#F4F2EC",
+      paper: "#F4F2EC",
     },
     text: {
-      primary: "#222",
-      secondary: "#5d9cc0",
+      primary: "#000000",
+      secondary: "#000000",
     },
     error: {
       main: "#FF6B6B",
@@ -123,7 +123,8 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          boxShadow: "none",
+          border: "1px solid black",
         },
       },
     },
