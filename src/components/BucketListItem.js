@@ -230,31 +230,39 @@ const BucketListItem = ({
                 <LocationOnIcon sx={{ fontSize: 16 }} />
                 {item.location || "Unknown"}
               </Typography>
-              {item.upvotes?.length > 0 && upvoters[item.id]?.[0]?.username && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    mb: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    cursor: "pointer",
-                    "&:hover": {
-                      opacity: 0.8,
-                    },
-                  }}
-                  onClick={handleOpenAttendeesDialog}
-                >
-                  <PeopleIcon sx={{ fontSize: 16 }} />
-                  {item.upvotes.length === 1 ? (
-                    <>
+              {(() => {
+                const upvotes = item.upvotes;
+                const upvArr = upvoters[item.id] || [];
+                if (
+                  upvotes?.length === 1 &&
+                  upvArr.length === 1 &&
+                  upvArr[0]?.id === upvotes[0] &&
+                  upvArr[0]?.username
+                ) {
+                  return (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mb: 1,
+                        display: "block",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        "&:hover": { opacity: 0.8 },
+                        wordBreak: "break-word",
+                        lineHeight: 1.8,
+                      }}
+                      onClick={handleOpenAttendeesDialog}
+                    >
+                      <PeopleIcon sx={{ fontSize: 16, mb: "-2px", mr: 0.5 }} />
                       <Chip
-                        label={upvoters[item.id][0].username}
+                        label={upvArr[0].username}
                         size="small"
                         sx={{
                           backgroundColor: "primary.light",
                           color: "primary.contrastText",
                           height: "20px",
+                          verticalAlign: "middle",
+                          mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
                             fontSize: "0.75rem",
@@ -265,16 +273,39 @@ const BucketListItem = ({
                         }}
                       />
                       {" is going"}
-                    </>
-                  ) : item.upvotes.length === 2 ? (
-                    <>
+                    </Typography>
+                  );
+                }
+                if (
+                  upvotes?.length === 2 &&
+                  upvArr.length === 2 &&
+                  upvArr[0]?.username &&
+                  upvArr[1]?.username
+                ) {
+                  return (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mb: 1,
+                        display: "block",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        "&:hover": { opacity: 0.8 },
+                        wordBreak: "break-word",
+                        lineHeight: 1.8,
+                      }}
+                      onClick={handleOpenAttendeesDialog}
+                    >
+                      <PeopleIcon sx={{ fontSize: 16, mb: "-2px", mr: 0.5 }} />
                       <Chip
-                        label={upvoters[item.id][0].username}
+                        label={upvArr[0].username}
                         size="small"
                         sx={{
                           backgroundColor: "primary.light",
                           color: "primary.contrastText",
                           height: "20px",
+                          verticalAlign: "middle",
+                          mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
                             fontSize: "0.75rem",
@@ -286,12 +317,14 @@ const BucketListItem = ({
                       />
                       {" and "}
                       <Chip
-                        label={upvoters[item.id][1].username}
+                        label={upvArr[1].username}
                         size="small"
                         sx={{
                           backgroundColor: "primary.light",
                           color: "primary.contrastText",
                           height: "20px",
+                          verticalAlign: "middle",
+                          mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
                             fontSize: "0.75rem",
@@ -302,16 +335,39 @@ const BucketListItem = ({
                         }}
                       />
                       {" are going"}
-                    </>
-                  ) : (
-                    <>
+                    </Typography>
+                  );
+                }
+                if (
+                  upvotes?.length > 2 &&
+                  upvArr.length === upvotes.length &&
+                  upvArr[0]?.id === upvotes[0] &&
+                  upvArr[0]?.username
+                ) {
+                  return (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mb: 1,
+                        display: "block",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        "&:hover": { opacity: 0.8 },
+                        wordBreak: "break-word",
+                        lineHeight: 1.8,
+                      }}
+                      onClick={handleOpenAttendeesDialog}
+                    >
+                      <PeopleIcon sx={{ fontSize: 16, mb: "-2px", mr: 0.5 }} />
                       <Chip
-                        label={upvoters[item.id][0].username}
+                        label={upvArr[0].username}
                         size="small"
                         sx={{
                           backgroundColor: "primary.light",
                           color: "primary.contrastText",
                           height: "20px",
+                          verticalAlign: "middle",
+                          mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
                             fontSize: "0.75rem",
@@ -321,13 +377,14 @@ const BucketListItem = ({
                           },
                         }}
                       />
-                      {` and ${item.upvotes.length - 1} other${
-                        item.upvotes.length - 1 === 1 ? " person" : " people"
+                      {` and ${upvotes.length - 1} other${
+                        upvotes.length - 1 === 1 ? " person" : " people"
                       } are going`}
-                    </>
-                  )}
-                </Typography>
-              )}
+                    </Typography>
+                  );
+                }
+                return null;
+              })()}
             </Box>
           </Box>
         </Box>
