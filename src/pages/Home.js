@@ -66,26 +66,21 @@ const Home = () => {
         if (currentUser) {
           setLoading(true);
           const userGroups = await getGroups();
-          console.log("Loaded groups:", userGroups); // Debug log
 
           if (!userGroups || userGroups.length === 0) {
-            setGroups([]); // No groups found, but this is not an error
-            setError(""); // Clear any previous error
+            setGroups([]); // no groups found, but this is not an error!!!
+            setError("");
           } else {
-            // Fetch items and member details for each group
+            // set item and member details for each group
             const groupsWithDetails = await Promise.all(
               userGroups.map(async (group) => {
-                console.log("Processing group:", group); // Debug log
-                // Fetch items
                 const items = await getBucketListItems(group.id);
-                // Sort items by date, with items without dates at the end
                 const sortedItems = items.sort((a, b) => {
                   if (!a.date) return 1;
                   if (!b.date) return -1;
                   return new Date(a.date) - new Date(b.date);
                 });
 
-                // Fetch member details
                 const { data: members } = await supabase
                   .from("group_members")
                   .select("user_id")
@@ -96,12 +91,11 @@ const Home = () => {
 
                 return {
                   ...group,
-                  items: sortedItems.slice(0, 5), // Get up to 5 items
+                  items: sortedItems.slice(0, 5),
                   memberDetails,
                 };
               })
             );
-            console.log("Groups with details:", groupsWithDetails); // Debug log
             setGroups(groupsWithDetails);
             setError("");
           }
