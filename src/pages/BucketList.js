@@ -38,8 +38,8 @@ const BucketList = () => {
     addDateSuggestion,
     getGroup,
     getUsersByIds,
-    upvoteBucketListItem,
-    removeUpvoteBucketListItem,
+    rsvpBucketListItem,
+    removeRsvpBucketListItem,
     deleteDateSuggestion,
     updateDateSuggestion,
     deleteBucketListItem,
@@ -284,9 +284,9 @@ const BucketList = () => {
     }
   };
 
-  const handleUpvote = async (itemId) => {
+  const handleRsvp = async (itemId) => {
     try {
-      await upvoteBucketListItem(itemId);
+      await rsvpBucketListItem(itemId);
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId
@@ -295,14 +295,14 @@ const BucketList = () => {
         )
       );
     } catch (error) {
-      setError("Failed to upvote item");
+      setError("Failed to RSVP");
       console.error(error);
     }
   };
 
-  const handleRemoveUpvote = async (itemId) => {
+  const handleRemoveRsvp = async (itemId) => {
     try {
-      await removeUpvoteBucketListItem(itemId);
+      await removeRsvpBucketListItem(itemId);
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === itemId
@@ -316,7 +316,7 @@ const BucketList = () => {
         )
       );
     } catch (error) {
-      setError("Failed to remove upvote");
+      setError("Failed to remove RSVP");
       console.error(error);
     }
   };
@@ -551,8 +551,8 @@ const BucketList = () => {
                 commentUsers={commentUsers}
                 currentUser={currentUser}
                 onEdit={handleEditItem}
-                onUpvote={handleUpvote}
-                onRemoveUpvote={handleRemoveUpvote}
+                onUpvote={handleRsvp}
+                onRemoveUpvote={handleRemoveRsvp}
                 onAddDateSuggestion={handleAddDateSuggestion}
                 onOpenComments={handleOpenComments}
                 onDelete={handleDeleteItem}

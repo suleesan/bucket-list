@@ -14,15 +14,17 @@ import {
   MenuItem,
   List,
   ListItem,
+  Stack,
 } from "@mui/material";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import EventIcon from "@mui/icons-material/Event";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
+import PeopleIcon from "@mui/icons-material/People";
 import ImageIcon from "@mui/icons-material/Image";
 import { useState, useEffect } from "react";
 import { useDatabase } from "../contexts/DatabaseContext";
@@ -48,6 +50,7 @@ const BucketListItem = ({
   const [imageFile, setImageFile] = useState(null);
   const [localCommentUsers, setLocalCommentUsers] = useState({});
   const [creator, setCreator] = useState(null);
+  const [attendeesDialogOpen, setAttendeesDialogOpen] = useState(false);
   const { getComments, getUsersByIds } = useDatabase();
 
   // Fetch creator's profile
@@ -109,6 +112,14 @@ const BucketListItem = ({
       const previewUrl = URL.createObjectURL(file);
       setEditedItem((prev) => ({ ...prev, image_url: previewUrl }));
     }
+  };
+
+  const handleOpenAttendeesDialog = () => {
+    setAttendeesDialogOpen(true);
+  };
+
+  const handleCloseAttendeesDialog = () => {
+    setAttendeesDialogOpen(false);
   };
 
   return (
@@ -217,6 +228,104 @@ const BucketListItem = ({
                 <LocationOnIcon sx={{ fontSize: 16 }} />
                 {item.location || "Unknown"}
               </Typography>
+              {item.upvotes?.length > 0 && upvoters[item.id]?.[0]?.username && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mb: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    cursor: "pointer",
+                    "&:hover": {
+                      opacity: 0.8,
+                    },
+                  }}
+                  onClick={handleOpenAttendeesDialog}
+                >
+                  <PeopleIcon sx={{ fontSize: 16 }} />
+                  {item.upvotes.length === 1 ? (
+                    <>
+                      <Chip
+                        label={upvoters[item.id][0].username}
+                        size="small"
+                        sx={{
+                          backgroundColor: "primary.light",
+                          color: "primary.contrastText",
+                          height: "20px",
+                          "& .MuiChip-label": {
+                            px: 1,
+                            fontSize: "0.75rem",
+                            lineHeight: "20px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                        }}
+                      />
+                      {" is going"}
+                    </>
+                  ) : item.upvotes.length === 2 ? (
+                    <>
+                      <Chip
+                        label={upvoters[item.id][0].username}
+                        size="small"
+                        sx={{
+                          backgroundColor: "primary.light",
+                          color: "primary.contrastText",
+                          height: "20px",
+                          "& .MuiChip-label": {
+                            px: 1,
+                            fontSize: "0.75rem",
+                            lineHeight: "20px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                        }}
+                      />
+                      {" and "}
+                      <Chip
+                        label={upvoters[item.id][1].username}
+                        size="small"
+                        sx={{
+                          backgroundColor: "primary.light",
+                          color: "primary.contrastText",
+                          height: "20px",
+                          "& .MuiChip-label": {
+                            px: 1,
+                            fontSize: "0.75rem",
+                            lineHeight: "20px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                        }}
+                      />
+                      {" are going"}
+                    </>
+                  ) : (
+                    <>
+                      <Chip
+                        label={upvoters[item.id][0].username}
+                        size="small"
+                        sx={{
+                          backgroundColor: "primary.light",
+                          color: "primary.contrastText",
+                          height: "20px",
+                          "& .MuiChip-label": {
+                            px: 1,
+                            fontSize: "0.75rem",
+                            lineHeight: "20px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                        }}
+                      />
+                      {` and ${item.upvotes.length - 1} other${
+                        item.upvotes.length - 1 === 1 ? " person" : " people"
+                      } are going`}
+                    </>
+                  )}
+                </Typography>
+              )}
             </Box>
           </Box>
         </Box>
@@ -224,9 +333,9 @@ const BucketListItem = ({
           <Button
             startIcon={
               item.upvotes?.includes(currentUser.id) ? (
-                <FavoriteIcon sx={{ color: "primary.main" }} />
+                <EventAvailableIcon sx={{ color: "primary.main" }} />
               ) : (
-                <FavoriteBorderIcon sx={{ color: "black" }} />
+                <EventIcon sx={{ color: "black" }} />
               )
             }
             onClick={() =>
@@ -234,9 +343,16 @@ const BucketListItem = ({
                 ? onRemoveUpvote(item.id)
                 : onUpvote(item.id)
             }
-            sx={{ color: "black", minWidth: 0, px: 0.5, mr: 0.5 }}
+            sx={{
+              color: item.upvotes?.includes(currentUser.id)
+                ? "primary.main"
+                : "black",
+              minWidth: 0,
+              px: 0.5,
+              mr: 0.5,
+            }}
           >
-            {item.upvotes?.length || 0}
+            {item.upvotes?.includes(currentUser.id) ? "Rallied" : "Rally"}
           </Button>
           <Button
             startIcon={<ChatBubbleOutlineIcon />}
@@ -275,6 +391,50 @@ const BucketListItem = ({
           </List>
         )}
       </CardContent>
+
+      {/* Attendees Dialog */}
+      <Dialog
+        open={attendeesDialogOpen}
+        onClose={handleCloseAttendeesDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, p: 2 }}>
+          Attendees
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseAttendeesDialog}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+            size="large"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {upvoters[item.id]?.map((user) => (
+              <Chip
+                key={user.id}
+                label={user.username}
+                size="medium"
+                sx={{
+                  backgroundColor: "primary.light",
+                  color: "primary.contrastText",
+                  "& .MuiChip-label": {
+                    px: 1,
+                  },
+                }}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={editItemDialogOpen}
         onClose={handleCloseEditItemDialog}

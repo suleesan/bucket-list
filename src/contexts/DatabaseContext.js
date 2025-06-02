@@ -156,13 +156,29 @@ export function DatabaseProvider({ children }) {
   }
 
   async function getBucketListItems(groupId) {
-    const { data, error } = await supabase
+    const { data: items, error: itemsError } = await supabase
       .from("bucket_list_items")
       .select("*")
       .eq("group_id", groupId)
       .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data;
+    if (itemsError) throw itemsError;
+
+    // Fetch upvotes for each item
+    const itemsWithUpvotes = await Promise.all(
+      items.map(async (item) => {
+        const { data: upvotes, error: upvotesError } = await supabase
+          .from("upvotes")
+          .select("user_id")
+          .eq("item_id", item.id);
+        if (upvotesError) throw upvotesError;
+        return {
+          ...item,
+          upvotes: upvotes.map((u) => u.user_id),
+        };
+      })
+    );
+
+    return itemsWithUpvotes;
   }
 
   async function updateBucketListItem(itemId, updates) {
@@ -241,15 +257,15 @@ export function DatabaseProvider({ children }) {
   //   if (error) throw error;
   // }
 
-  // UPVOTES
-  async function upvoteBucketListItem(itemId) {
+  // RSVPs (formerly UPVOTES)
+  async function rsvpBucketListItem(itemId) {
     const { error } = await supabase
       .from("upvotes")
       .insert([{ item_id: itemId, user_id: currentUser.id }]);
     if (error) throw error;
   }
 
-  async function removeUpvoteBucketListItem(itemId) {
+  async function removeRsvpBucketListItem(itemId) {
     const { error } = await supabase
       .from("upvotes")
       .delete()
@@ -258,7 +274,7 @@ export function DatabaseProvider({ children }) {
     if (error) throw error;
   }
 
-  async function getUpvotes(itemId) {
+  async function getRsvps(itemId) {
     const { data, error } = await supabase
       .from("upvotes")
       .select("user_id")
@@ -349,13 +365,9 @@ export function DatabaseProvider({ children }) {
     getComments,
     addComment,
     deleteComment,
-    // getDateSuggestions,
-    // addDateSuggestion,
-    // updateDateSuggestion,
-    // deleteDateSuggestion,
-    upvoteBucketListItem,
-    removeUpvoteBucketListItem,
-    getUpvotes,
+    rsvpBucketListItem,
+    removeRsvpBucketListItem,
+    getRsvps,
     getUser,
     getUsersByIds,
     updateGroup,
