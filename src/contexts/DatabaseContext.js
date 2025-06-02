@@ -201,7 +201,7 @@ export function DatabaseProvider({ children }) {
   async function getComments(itemId) {
     const { data, error } = await supabase
       .from("comments")
-      .select("*, profiles(username)")
+      .select("id, content, created_at, created_by, profiles!inner(username)")
       .eq("item_id", itemId)
       .order("created_at", { ascending: true });
     if (error) throw error;
@@ -339,15 +339,17 @@ export function DatabaseProvider({ children }) {
           upsert: true,
         });
 
-      if (error) throw error;
-
+      if (error) {
+        console.error("Error:", error);
+        throw error;
+      }
       const {
         data: { publicUrl },
       } = supabase.storage.from("bucket-list-images").getPublicUrl(path);
 
       return publicUrl;
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Error uploading image");
       throw error;
     }
   };
