@@ -57,7 +57,7 @@ const Home = () => {
     getBucketListItems,
     getUsersByIds,
     uploadImage,
-    onImageUpload,
+    loadGroups,
   } = useDatabase();
 
   useEffect(() => {
@@ -206,41 +206,25 @@ const Home = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingGroup?.name.trim()) return;
-
     setLoading(true);
     setError("");
-
     try {
-      let imageUrl;
+      let imageUrl = editingGroup.image_url;
       if (editImageFile) {
         imageUrl = await uploadImage(
           editImageFile,
           `groups/${editingGroup.id}_${Date.now()}_${editImageFile.name}`
         );
-        await updateGroup(editingGroup.id, {
-          name: editingGroup.name,
-          image_url: imageUrl,
-        });
-      } else {
-        await updateGroup(editingGroup.id, {
-          name: editingGroup.name,
-        });
       }
-
-      setGroups((prevGroups) =>
-        prevGroups.map((group) =>
-          group.id === editingGroup.id
-            ? {
-                ...group,
-                name: editingGroup.name,
-                image_url: editImageFile ? imageUrl : group.image_url,
-              }
-            : group
-        )
-      );
-
-      handleCloseEditDialog();
+      await updateGroup(editingGroup.id, {
+        ...editingGroup,
+        image_url: imageUrl,
+      });
+      setEditDialogOpen(false);
+      setEditingGroup(null);
+      setEditImageFile(null);
+      setEditPreviewUrl(null);
+      await loadGroups();
     } catch (error) {
       setError("Failed to update group");
       console.error(error);

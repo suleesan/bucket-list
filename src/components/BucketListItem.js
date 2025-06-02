@@ -92,10 +92,11 @@ const BucketListItem = ({
   };
 
   const handleSaveItemEdit = async () => {
+    let imageUrl = editedItem.image_url;
     if (imageFile) {
-      await onImageUpload(item.id, imageFile);
+      imageUrl = await onImageUpload(item.id, imageFile);
     }
-    onEdit(item.id, { ...editedItem, image_url: editedItem.image_url });
+    onEdit(item.id, { ...editedItem, image_url: imageUrl });
     handleCloseEditItemDialog();
   };
 
@@ -135,6 +136,7 @@ const BucketListItem = ({
         },
       }}
     >
+      {console.log(`Image URL for item ${item.title}:`, item.image_url)}
       <Box
         sx={{
           height: "200px",

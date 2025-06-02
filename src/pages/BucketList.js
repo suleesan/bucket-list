@@ -92,9 +92,9 @@ const BucketList = () => {
     for (const item of items) {
       const { data: comments } = await supabase
         .from("comments")
-        .select("createdBy")
+        .select("created_by")
         .eq("item_id", item.id);
-      comments?.forEach((c) => allCommenters.add(c.createdBy));
+      comments?.forEach((c) => allCommenters.add(c.created_by));
     }
     const userIds = Array.from(allCommenters).filter(Boolean);
     if (userIds.length > 0) {
@@ -588,7 +588,7 @@ const BucketList = () => {
         fullWidth
       >
         <DialogTitle sx={{ pt: 3 }}>
-          <Typography variant="h5" fontWeight="bold">
+          <Typography variant="h6" fontWeight="bold">
             Add New Bucket List Item
           </Typography>
         </DialogTitle>
