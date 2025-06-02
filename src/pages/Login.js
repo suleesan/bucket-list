@@ -107,7 +107,7 @@ const Login = () => {
       }}
     >
       <StyledPaper elevation={3} sx={{ marginTop: "100px" }}>
-        <Typography component="h1" variant="h5">
+        <Typography component="h1" variant="h5" sx={{ fontWeight: "bold" }}>
           {activeTab === 0 ? "Create Account" : "Sign In"}
         </Typography>
         <Box sx={{ width: "100%", mt: 2 }}>

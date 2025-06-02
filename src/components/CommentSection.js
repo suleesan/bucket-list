@@ -96,7 +96,7 @@ const CommentSection = ({
       <DialogContent dividers>
         <List>
           {comments.length === 0 && (
-            <Typography color="text.secondary" align="center" sx={{ mt: 2 }}>
+            <Typography color="primary.main" align="center" sx={{ mt: 2 }}>
               No comments yet. Be the first to comment!
             </Typography>
           )}
@@ -125,7 +125,7 @@ const CommentSection = ({
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ color: (theme) => theme.palette.grey[500] }}
+                      sx={{ color: 'text.primary' }}
                     >
                       {comment.created_at
                         ? new Date(comment.created_at).toLocaleString()
@@ -134,6 +134,7 @@ const CommentSection = ({
                   </Box>
                 }
                 secondary={comment.content || comment.text}
+                secondaryTypographyProps={{ sx: { color: 'text.primary' } }}
               />
             </ListItem>
           ))}
