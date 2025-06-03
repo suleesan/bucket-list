@@ -306,8 +306,32 @@ export function DatabaseProvider({ children }) {
   };
 
   async function deleteGroup(groupId) {
-    const { error } = await supabase.from("groups").delete().eq("id", groupId);
-    if (error) throw error;
+    try {
+      // fetch items
+      const { data: items } = await supabase
+        .from("bucket_list_items")
+        .select("id")
+        .eq("group_id", groupId);
+
+      if (items?.length > 0) {
+        const itemIds = items.map((item) => item.id);
+
+        // delete all data
+        await supabase.from("upvotes").delete().in("item_id", itemIds);
+        await supabase.from("comments").delete().in("item_id", itemIds);
+        await supabase
+          .from("bucket_list_items")
+          .delete()
+          .eq("group_id", groupId);
+      }
+
+      // delete group members, then group
+      await supabase.from("group_members").delete().eq("group_id", groupId);
+      await supabase.from("groups").delete().eq("id", groupId);
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      throw error;
+    }
   }
 
   const uploadImage = async (file, path) => {

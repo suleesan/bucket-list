@@ -275,12 +275,14 @@ const Home = () => {
 
     try {
       await deleteGroup(editingGroup.id);
-      await loadGroupsWithDetails();
       handleCloseEditDialog();
       setDeleteSuccess(true);
+      setGroups(groups.filter((g) => g.id !== editingGroup.id));
+      await loadGroupsWithDetails();
     } catch (error) {
       console.error("Error deleting group:", error);
       setError(error.message || "Failed to delete group. Please try again.");
+      setDeleteConfirmOpen(true);
     } finally {
       setLoading(false);
     }
@@ -420,7 +422,12 @@ const Home = () => {
                   background: "#fff",
                 }}
               >
-                <Typography variant="h6" color="text.secondary" gutterBottom>
+                <Typography
+                  variant="subtitle1"
+                  component="div"
+                  color="text.secondary"
+                  gutterBottom
+                >
                   No groups yet
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
