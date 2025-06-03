@@ -23,7 +23,7 @@ export function DatabaseProvider({ children }) {
             name,
             image_url: imageUrl,
             created_by: currentUser.id,
-            code, // Add the generated code
+            code,
           },
         ])
         .select()
@@ -31,7 +31,6 @@ export function DatabaseProvider({ children }) {
 
       if (error) throw error;
 
-      // Add the creator as a member
       await supabase.from("group_members").insert([
         {
           group_id: data.id,
@@ -56,7 +55,6 @@ export function DatabaseProvider({ children }) {
   }
 
   async function getGroups() {
-    // Get all groups for the user
     const { data: groups, error } = await supabase
       .from("groups")
       .select("*, group_members!inner(user_id)")
@@ -93,7 +91,7 @@ export function DatabaseProvider({ children }) {
 
   async function joinGroupByCode(code) {
     try {
-      // Find the group by code first
+      // find group
       const { data: groups, error: groupError } = await supabase
         .from("groups")
         .select("id")
@@ -111,7 +109,7 @@ export function DatabaseProvider({ children }) {
 
       const group = groups[0];
 
-      // Check if user is already a member
+      // check if user is already a member
       const { data: memberships, error: membershipError } = await supabase
         .from("group_members")
         .select("group_id")
@@ -127,7 +125,6 @@ export function DatabaseProvider({ children }) {
         throw new Error("You are already a member of this group");
       }
 
-      // Add user to group
       const { error: joinError } = await supabase
         .from("group_members")
         .insert([{ group_id: group.id, user_id: currentUser.id }]);
@@ -162,7 +159,7 @@ export function DatabaseProvider({ children }) {
       .order("created_at", { ascending: false });
     if (itemsError) throw itemsError;
 
-    // Fetch upvotes for each item
+    // fetch upvotes (RSVPs) for each item
     const itemsWithUpvotes = await Promise.all(
       items.map(async (item) => {
         const { data: upvotes, error: upvotesError } = await supabase
@@ -237,40 +234,6 @@ export function DatabaseProvider({ children }) {
     if (error) throw error;
   }
 
-  // DATE SUGGESTIONS
-  // async function getDateSuggestions(itemId) {
-  //   const { data, error } = await supabase
-  //     .from("date_suggestions")
-  //     .select("*, profiles(username)")
-  //     .eq("item_id", itemId)
-  //     .order("created_at", { ascending: true });
-  //   if (error) throw error;
-  //   return data;
-  // }
-
-  // async function addDateSuggestion(itemId, date) {
-  //   const { error } = await supabase
-  //     .from("date_suggestions")
-  //     .insert([{ item_id: itemId, suggested_by: currentUser.id, date }]);
-  //   if (error) throw error;
-  // }
-
-  // async function updateDateSuggestion(suggestionId, updates) {
-  //   const { error } = await supabase
-  //     .from("date_suggestions")
-  //     .update(updates)
-  //     .eq("id", suggestionId);
-  //   if (error) throw error;
-  // }
-
-  // async function deleteDateSuggestion(suggestionId) {
-  //   const { error } = await supabase
-  //     .from("date_suggestions")
-  //     .delete()
-  //     .eq("id", suggestionId);
-  //   if (error) throw error;
-  // }
-
   // RSVPs (formerly UPVOTES)
   async function rsvpBucketListItem(itemId) {
     const { error } = await supabase
@@ -318,14 +281,23 @@ export function DatabaseProvider({ children }) {
   }
 
   // GROUPS
-  const updateGroup = async (groupId, updates) => {
+  const updateGroup = async (groupId, groupData) => {
     try {
-      const { error } = await supabase
+      const validFields = ["name", "image_url"];
+      const updateData = Object.keys(groupData)
+        .filter((key) => validFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = groupData[key];
+          return obj;
+        }, {});
+
+      const { data, error } = await supabase
         .from("groups")
-        .update(updates)
+        .update(updateData)
         .eq("id", groupId);
 
       if (error) throw error;
+      return data;
     } catch (error) {
       console.error("Error updating group:", error);
       throw error;
@@ -410,6 +382,7 @@ export function DatabaseProvider({ children }) {
     updateGroup,
     deleteGroup,
     uploadImage,
+    loadGroups: getGroups,
   };
 
   return (

@@ -60,75 +60,71 @@ const Home = () => {
     loadGroups,
   } = useDatabase();
 
-  useEffect(() => {
-    const loadGroups = async () => {
-      try {
-        if (currentUser) {
-          setLoading(true);
-          const userGroups = await getGroups();
+  const loadGroupsWithDetails = async () => {
+    try {
+      if (currentUser) {
+        setLoading(true);
+        const userGroups = await getGroups();
 
-          if (!userGroups || userGroups.length === 0) {
-            setGroups([]); // no groups found, but this is not an error!!!
-            setError("");
-          } else {
-            // set item and member details for each group
-            const groupsWithDetails = await Promise.all(
-              userGroups.map(async (group) => {
-                const items = await getBucketListItems(group.id);
-                const sortedItems = items.sort((a, b) => {
-                  if (!a.date) return 1;
-                  if (!b.date) return -1;
-                  return new Date(a.date) - new Date(b.date);
-                });
-
-                const { data: members } = await supabase
-                  .from("group_members")
-                  .select("user_id")
-                  .eq("group_id", group.id);
-
-                const memberIds = members.map((m) => m.user_id);
-                const memberDetails = await getUsersByIds(memberIds);
-
-                return {
-                  ...group,
-                  items: sortedItems.slice(0, 5),
-                  memberDetails,
-                };
-              })
-            );
-            setGroups(groupsWithDetails);
-            setError("");
-          }
+        if (!userGroups || userGroups.length === 0) {
+          setGroups([]);
+          setError("");
+          return;
         }
-      } catch (error) {
-        setError("Failed to load groups");
-        setGroups([]);
-        console.error(error);
-      } finally {
-        setLoading(false);
+
+        const groupsWithDetails = await Promise.all(
+          userGroups.map(async (group) => {
+            const items = await getBucketListItems(group.id);
+            const sortedItems = items.sort((a, b) => {
+              if (!a.date) return 1;
+              if (!b.date) return -1;
+              return new Date(a.date) - new Date(b.date);
+            });
+
+            const { data: members } = await supabase
+              .from("group_members")
+              .select("user_id")
+              .eq("group_id", group.id);
+
+            const memberIds = members.map((m) => m.user_id);
+            const memberDetails = await getUsersByIds(memberIds);
+
+            return {
+              ...group,
+              items: sortedItems.slice(0, 5),
+              memberDetails,
+            };
+          })
+        );
+        setGroups(groupsWithDetails);
+        setError("");
       }
-    };
-
-    loadGroups();
-  }, [currentUser, getGroups, getBucketListItems, getUsersByIds]);
-
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setImageFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setPreviewUrl(previewUrl);
+    } catch (error) {
+      setError("Failed to load groups");
+      setGroups([]);
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditImageChange = (event) => {
+  useEffect(() => {
+    loadGroupsWithDetails();
+  }, [currentUser, getGroups, getBucketListItems, getUsersByIds]);
+
+  const handleImageChange = (event, isEdit = false) => {
     const file = event.target.files[0];
     if (file) {
-      setEditImageFile(file);
-      // Create a preview URL for the image
-      const previewUrl = URL.createObjectURL(file);
-      setEditPreviewUrl(previewUrl);
-      setEditingGroup((prev) => ({ ...prev, image_url: previewUrl }));
+      if (isEdit) {
+        setEditImageFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setEditPreviewUrl(previewUrl);
+        setEditingGroup((prev) => ({ ...prev, image_url: previewUrl }));
+      } else {
+        setImageFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setPreviewUrl(previewUrl);
+      }
     }
   };
 
@@ -140,21 +136,40 @@ const Home = () => {
     try {
       let imageUrl = null;
       if (imageFile) {
-        imageUrl = await uploadImage(
-          imageFile,
-          `groups/${Date.now()}_${imageFile.name}`
-        );
+        try {
+          imageUrl = await uploadImage(
+            imageFile,
+            `groups/${Date.now()}_${imageFile.name}`
+          );
+        } catch (uploadError) {
+          // keep detailed for future reference
+          console.error("Image upload failed for new group:", {
+            error: uploadError,
+            message: uploadError.message,
+            details: uploadError.details,
+            hint: uploadError.hint,
+            code: uploadError.code,
+          });
+          throw uploadError;
+        }
       }
 
       const groupId = await createGroup(newGroupName, imageUrl);
+
       setNewGroupName("");
       setImageFile(null);
       setPreviewUrl(null);
       setShowCreateDialog(false);
       navigate(`/bucket-list/${groupId}`);
     } catch (error) {
+      console.error("Failed to create group:", {
+        error: error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
       setError("Failed to create group");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -205,23 +220,43 @@ const Home = () => {
     try {
       let imageUrl = editingGroup.image_url;
       if (editImageFile) {
-        imageUrl = await uploadImage(
-          editImageFile,
-          `groups/${editingGroup.id}_${Date.now()}_${editImageFile.name}`
-        );
+        try {
+          imageUrl = await uploadImage(
+            editImageFile,
+            `groups/${editingGroup.id}_${Date.now()}_${editImageFile.name}`
+          );
+        } catch (uploadError) {
+          console.error("Image upload failed for group edit:", {
+            error: uploadError,
+            message: uploadError.message,
+            details: uploadError.details,
+            hint: uploadError.hint,
+            code: uploadError.code,
+          });
+          throw uploadError;
+        }
       }
+
       await updateGroup(editingGroup.id, {
         ...editingGroup,
         image_url: imageUrl,
       });
+
       setEditDialogOpen(false);
       setEditingGroup(null);
       setEditImageFile(null);
       setEditPreviewUrl(null);
-      await loadGroups();
+
+      await loadGroupsWithDetails();
     } catch (error) {
+      console.error("Failed to update group:", {
+        error: error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
       setError("Failed to update group");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -240,13 +275,8 @@ const Home = () => {
 
     try {
       await deleteGroup(editingGroup.id);
-
-      setGroups((prevGroups) =>
-        prevGroups.filter((group) => group.id !== editingGroup.id)
-      );
-
+      await loadGroupsWithDetails();
       handleCloseEditDialog();
-
       setDeleteSuccess(true);
     } catch (error) {
       console.error("Error deleting group:", error);
@@ -403,14 +433,17 @@ const Home = () => {
             groups.map((group) => (
               <Grid size={{ xs: 12, sm: 6 }} key={group.id}>
                 <Card
+                  onClick={() => navigate(`/bucket-list/${group.id}`)}
                   sx={{
                     height: "100%",
                     display: "flex",
                     flexDirection: "column",
                     background: "#fff",
+                    cursor: "pointer",
                     "&:hover": {
                       transform: "translateY(-4px)",
                       transition: "transform 0.2s",
+                      boxShadow: 3,
                     },
                   }}
                 >
@@ -429,7 +462,10 @@ const Home = () => {
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={() => handleOpenEditDialog(group)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // don't let card click when clicking edit
+                        handleOpenEditDialog(group);
+                      }}
                       sx={{
                         position: "absolute",
                         top: 8,
@@ -472,7 +508,10 @@ const Home = () => {
                       </Typography>
                       <Tooltip title="Copy group code">
                         <IconButton
-                          onClick={() => copyToClipboard(group.code)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // don't let card click when copying
+                            copyToClipboard(group.code);
+                          }}
                           size="small"
                           sx={{ color: "primary.main" }}
                         >
@@ -503,9 +542,7 @@ const Home = () => {
                         >
                           Code:
                         </Typography>
-                        <Typography variant="body2">
-                          {group.code}
-                        </Typography>
+                        <Typography variant="body2">{group.code}</Typography>
                       </Box>
                       <Box sx={{ mb: 1 }}>
                         <Typography
@@ -545,52 +582,67 @@ const Home = () => {
                         >
                           Upcoming Events
                         </Typography>
-                        {group.items.map((item, index) => (
-                          <Box
-                            key={item.id}
-                            sx={{
-                              backgroundColor: "background.default",
-                              borderRadius: 1,
-                              p: 1.5,
-                              mb: 1,
-                            }}
-                          >
+                        {group.items
+                          .filter((item) => item.date) // Only show items with dates
+                          .sort((a, b) => new Date(a.date) - new Date(b.date)) // Sort chronologically
+                          .map((item) => (
                             <Box
+                              key={item.id}
                               sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
+                                backgroundColor: "background.default",
+                                borderRadius: 1,
+                                p: 1.5,
+                                mb: 1,
                               }}
                             >
-                              <Typography
-                                variant="subtitle1"
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
                               >
-                                {item.title}
-                              </Typography>
-                              {item.date && (
+                                <Box>
+                                  <Typography variant="subtitle1">
+                                    {item.title}
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ mt: 0.5 }}
+                                  >
+                                    {new Date(item.date).toLocaleDateString(
+                                      undefined,
+                                      {
+                                        weekday: "long",
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                      }
+                                    )}
+                                  </Typography>
+                                </Box>
                                 <Typography
                                   variant="body2"
+                                  color="primary"
+                                  sx={{
+                                    fontWeight: "medium",
+                                    ml: 2,
+                                  }}
                                 >
-                                  {new Date(item.date).toLocaleDateString()}
+                                  {new Date(item.date).toLocaleDateString(
+                                    undefined,
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                    }
+                                  )}
                                 </Typography>
-                              )}
+                              </Box>
                             </Box>
-                          </Box>
-                        ))}
+                          ))}
                       </Box>
                     )}
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      onClick={() => navigate(`/bucket-list/${group.id}`)}
-                      sx={{
-                        mt: 2,
-                        bgcolor: "primary.main",
-                        "&:hover": { bgcolor: "primary.dark" },
-                      }}
-                    >
-                      View Bucket List
-                    </Button>
                   </CardContent>
                 </Card>
               </Grid>
@@ -660,7 +712,7 @@ const Home = () => {
               type="file"
               hidden
               accept="image/*"
-              onChange={handleImageChange}
+              onChange={(e) => handleImageChange(e, false)}
             />
           </Button>
           {previewUrl && (
@@ -738,7 +790,7 @@ const Home = () => {
               type="file"
               hidden
               accept="image/*"
-              onChange={handleEditImageChange}
+              onChange={(e) => handleImageChange(e, true)}
             />
           </Button>
           {(editPreviewUrl || editingGroup?.image_url) && (

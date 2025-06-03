@@ -38,7 +38,6 @@ const CommentSection = ({
       if (!isMounted) return;
       setComments(commentData);
       onCommentCountChange(itemId, commentData.length);
-      // Fetch user info for all unique UIDs
       const uids = Array.from(
         new Set(commentData.map((c) => c.created_by).filter(Boolean))
       );
@@ -59,7 +58,6 @@ const CommentSection = ({
     if (!newComment.trim()) return;
     await addComment(itemId, newComment);
     setNewComment("");
-    // Refresh comments
     const commentData = await getComments(itemId);
     setComments(commentData);
     onCommentCountChange(itemId, commentData.length);
@@ -67,7 +65,6 @@ const CommentSection = ({
 
   const handleDeleteComment = async (commentId) => {
     await deleteComment(commentId);
-    // Refresh comments
     const commentData = await getComments(itemId);
     setComments(commentData);
     onCommentCountChange(itemId, commentData.length);
@@ -123,10 +120,7 @@ const CommentSection = ({
                     <Typography>
                       {userMap[comment.created_by]?.username || "Unknown"}
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: 'text.primary' }}
-                    >
+                    <Typography variant="body2" sx={{ color: "text.primary" }}>
                       {comment.created_at
                         ? new Date(comment.created_at).toLocaleString()
                         : ""}
@@ -134,7 +128,7 @@ const CommentSection = ({
                   </Box>
                 }
                 secondary={comment.content || comment.text}
-                secondaryTypographyProps={{ sx: { color: 'text.primary' } }}
+                secondaryTypographyProps={{ sx: { color: "text.primary" } }}
               />
             </ListItem>
           ))}

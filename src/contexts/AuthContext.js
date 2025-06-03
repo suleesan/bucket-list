@@ -29,9 +29,8 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Sign up and create profile
   async function signup(username, email, password) {
-    // Check if username is taken
+    // check first if username is taken
     const { data: existing } = await supabase
       .from("profiles")
       .select("id")
@@ -49,7 +48,7 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
-    // Create profile immediately after signup
+    // create profile immediately after signup
     const { error: profileError } = await supabase.from("profiles").insert([
       {
         id: data.user.id,
@@ -62,7 +61,6 @@ export function AuthProvider({ children }) {
       throw new Error("Failed to create profile");
     }
 
-    // Show check email message if confirmation is required
     setShowCheckEmailMessage(true);
 
     return data.user;
@@ -75,19 +73,17 @@ export function AuthProvider({ children }) {
     });
     if (error) throw error;
 
-    // Check if profile exists
     const { data: profile } = await supabase
       .from("profiles")
       .select("id")
       .eq("id", data.user.id)
       .single();
 
-    // If no profile exists, create one
     if (!profile) {
       const { error: insertError } = await supabase.from("profiles").insert([
         {
           id: data.user.id,
-          username: email.split("@")[0], // Default username from email
+          username: email.split("@")[0], // default to username from email
         },
       ]);
       if (insertError) throw insertError;

@@ -21,9 +21,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useDatabase } from "../contexts/DatabaseContext";
 import { useAuth } from "../contexts/AuthContext";
 import BucketListItem from "../components/BucketListItem";
-import SuggestDateDialog from "../components/SuggestDateDialog";
 import CommentSection from "../components/CommentSection";
 import { supabase } from "../supabase";
+import ImageIcon from "@mui/icons-material/Image";
 
 const BucketList = () => {
   const { groupId } = useParams();
@@ -61,17 +61,10 @@ const BucketList = () => {
 
   const [creators, setCreators] = useState({});
   const [upvoters, setUpvoters] = useState({});
-  const [dateSuggestionUsers, setDateSuggestionUsers] = useState({});
-
-  const [suggestDateDialogOpen, setSuggestDateDialogOpen] = useState(false);
-  const [suggestDateItemId, setSuggestDateItemId] = useState(null);
-  const [suggestedDate, setSuggestedDate] = useState("");
 
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [commentItemId, setCommentItemId] = useState(null);
-
   const [commentCounts, setCommentCounts] = useState({});
-
   const [commentUsers, setCommentUsers] = useState({});
 
   const [imageFile, setImageFile] = useState(null);
@@ -119,9 +112,16 @@ const BucketList = () => {
       const group = await getGroup(groupId);
       setGroupName(group.name);
       const groupItems = await getBucketListItems(groupId);
-      setItems(groupItems);
-      await fetchCommentCounts(groupItems);
-      await fetchCommentUsers(groupItems);
+
+      const sortedItems = groupItems.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date) - new Date(b.date);
+      });
+
+      setItems(sortedItems);
+      await fetchCommentCounts(sortedItems);
+      await fetchCommentUsers(sortedItems);
     } catch (error) {
       setError("Failed to load group and items");
       console.error(error);
@@ -165,24 +165,15 @@ const BucketList = () => {
     fetchCreators();
   }, [items, getUsersByIds]);
 
-  useEffect(() => {
-    const fetchDateSuggestionUsers = async () => {
-      const userMap = {};
-      for (const item of items) {
-        if (item.dateSuggestions && item.dateSuggestions.length > 0) {
-          for (const suggestion of item.dateSuggestions) {
-            const uid = suggestion.suggestedBy;
-            if (uid && !userMap[uid]) {
-              const [user] = await getUsersByIds([uid]);
-              userMap[uid] = user;
-            }
-          }
-        }
-      }
-      setDateSuggestionUsers(userMap);
-    };
-    fetchDateSuggestionUsers();
-  }, [items, getUsersByIds]);
+  const handleImageChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewUrl(previewUrl);
+      setNewItem((prev) => ({ ...prev, image_url: previewUrl }));
+    }
+  };
 
   const handleAddItem = async () => {
     if (!newItem.title.trim()) return;
@@ -233,58 +224,6 @@ const BucketList = () => {
       console.error(error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const openSuggestDateDialog = (itemId) => {
-    setSuggestDateItemId(itemId);
-    setSuggestedDate("");
-    setSuggestDateDialogOpen(true);
-  };
-
-  const handleSubmitSuggestDate = async () => {
-    if (!suggestedDate) return;
-
-    const [yyyy, mm, dd] = suggestedDate.split("-");
-    const formattedDate = `${mm}-${dd}-${yyyy}`;
-    try {
-      const newSuggestion = {
-        date: formattedDate,
-        suggestedBy: currentUser.uid,
-        votes: [],
-      };
-
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === suggestDateItemId
-            ? {
-                ...item,
-                dateSuggestions: [
-                  ...(item.dateSuggestions || []),
-                  newSuggestion,
-                ],
-              }
-            : item
-        )
-      );
-
-      await addDateSuggestion(suggestDateItemId, formattedDate);
-      setSuggestDateDialogOpen(false);
-      setSuggestDateItemId(null);
-      setSuggestedDate("");
-    } catch (error) {
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === suggestDateItemId
-            ? {
-                ...item,
-                dateSuggestions: item.dateSuggestions.slice(0, -1),
-              }
-            : item
-        )
-      );
-      setError("Failed to add date suggestion");
-      console.error(error);
     }
   };
 
@@ -379,62 +318,6 @@ const BucketList = () => {
     }));
   };
 
-  const handleDeleteDateSuggestion = async (itemId, suggestionIndex) => {
-    try {
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                dateSuggestions: item.dateSuggestions.filter(
-                  (_, index) => index !== suggestionIndex
-                ),
-              }
-            : item
-        )
-      );
-
-      await deleteDateSuggestion(itemId, suggestionIndex);
-    } catch (error) {
-      // Revert optimistic update on error
-      await loadGroupAndItems();
-      setError("Failed to delete date suggestion");
-      console.error(error);
-    }
-  };
-
-  const handleUpdateDateSuggestion = async (
-    itemId,
-    suggestionIndex,
-    newDate
-  ) => {
-    try {
-      const [yyyy, mm, dd] = newDate.split("-");
-      const formattedDate = `${mm}-${dd}-${yyyy}`;
-
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                dateSuggestions: item.dateSuggestions.map((suggestion, index) =>
-                  index === suggestionIndex
-                    ? { ...suggestion, date: formattedDate }
-                    : suggestion
-                ),
-              }
-            : item
-        )
-      );
-
-      await updateDateSuggestion(itemId, suggestionIndex, formattedDate);
-    } catch (error) {
-      await loadGroupAndItems();
-      setError("Failed to edit date suggestion");
-      console.error(error);
-    }
-  };
-
   const handleDeleteItem = async (itemId) => {
     try {
       await deleteBucketListItem(itemId);
@@ -465,10 +348,10 @@ const BucketList = () => {
     }
   };
 
-  // Filter items based on status
-  const filteredItems = statusFilter === "all" 
-    ? items 
-    : items.filter(item => item.status === statusFilter);
+  const filteredItems =
+    statusFilter === "all"
+      ? items
+      : items.filter((item) => item.status === statusFilter);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -526,8 +409,6 @@ const BucketList = () => {
           </Button>
         </Box>
       </Box>
-
-      {/* Status Filter Buttons */}
       <Box sx={{ mb: 4, display: "flex", gap: 1 }}>
         {["all", "idea", "planning", "done"].map((status) => (
           <Button
@@ -537,9 +418,11 @@ const BucketList = () => {
             sx={{
               textTransform: "capitalize",
               color: statusFilter === status ? "white" : "black",
-              backgroundColor: statusFilter === status ? "black" : "transparent",
+              backgroundColor:
+                statusFilter === status ? "black" : "transparent",
               "&:hover": {
-                backgroundColor: statusFilter === status ? "#4A4A4A" : "rgba(0, 0, 0, 0.1)",
+                backgroundColor:
+                  statusFilter === status ? "#4A4A4A" : "rgba(0, 0, 0, 0.1)",
                 color: statusFilter === status ? "white" : "black",
               },
               fontWeight: statusFilter === status ? "bold" : "normal",
@@ -565,13 +448,14 @@ const BucketList = () => {
       ) : filteredItems.length === 0 ? (
         <Grid>
           <Typography variant="subtitle1" color="primary.main" gutterBottom>
-            {statusFilter === "all" ? "No bucket list items yet" : `No ${statusFilter} items found`}
+            {statusFilter === "all"
+              ? "No bucket list items yet"
+              : `No ${statusFilter} items found`}
           </Typography>
           <Typography variant="body2" color="primary.main">
-            {statusFilter === "all" 
+            {statusFilter === "all"
               ? 'Click the "Add Item" button to create your first bucket list item'
-              : `Try selecting a different filter or add a new ${statusFilter} item`
-            }
+              : `Try selecting a different filter or add a new ${statusFilter} item`}
           </Typography>
         </Grid>
       ) : (
@@ -582,13 +466,11 @@ const BucketList = () => {
                 item={item}
                 creators={creators}
                 upvoters={upvoters}
-                dateSuggestionUsers={dateSuggestionUsers}
                 commentUsers={commentUsers}
                 currentUser={currentUser}
                 onEdit={handleEditItem}
                 onUpvote={handleRsvp}
                 onRemoveUpvote={handleRemoveRsvp}
-                onAddDateSuggestion={handleAddDateSuggestion}
                 onOpenComments={handleOpenComments}
                 onDelete={handleDeleteItem}
                 commentCount={commentCounts[item.id] || 0}
@@ -598,14 +480,6 @@ const BucketList = () => {
           ))}
         </Grid>
       )}
-
-      <SuggestDateDialog
-        open={suggestDateDialogOpen}
-        value={suggestedDate}
-        onChange={setSuggestedDate}
-        onClose={() => setSuggestDateDialogOpen(false)}
-        onSubmit={handleSubmitSuggestDate}
-      />
 
       <CommentSection
         open={commentDialogOpen}
@@ -622,25 +496,12 @@ const BucketList = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2 }}>
-          <Typography variant="subtitle1">
+        <DialogTitle sx={{ pt: 3 }}>
+          <Typography variant="h6" fontWeight="bold">
             Add New Bucket List Item
           </Typography>
-          <IconButton
-            aria-label="close"
-            onClick={() => setOpenDialog(false)}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-            size="large"
-          >
-            <CloseIcon />
-          </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
               fullWidth
@@ -702,6 +563,35 @@ const BucketList = () => {
               <MenuItem value="planning">Planning</MenuItem>
               <MenuItem value="done">Done</MenuItem>
             </TextField>
+
+            <Button
+              component="label"
+              variant="outlined"
+              startIcon={<ImageIcon />}
+              fullWidth
+              sx={{ mt: 2, mb: 2 }}
+            >
+              Upload Image
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+            </Button>
+            {previewUrl && (
+              <Box
+                sx={{
+                  width: "100%",
+                  height: "200px",
+                  backgroundImage: `url(${previewUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  mb: 2,
+                  borderRadius: 1,
+                }}
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
@@ -728,7 +618,7 @@ const BucketList = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ color: 'black' }}>Edit Bucket List Item</DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>Edit Bucket List Item</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField

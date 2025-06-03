@@ -43,7 +43,6 @@ const BucketListItem = ({
   commentCount,
   onImageUpload,
 }) => {
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
   const [editedItem, setEditedItem] = useState(null);
   const [comments, setComments] = useState([]);
@@ -53,23 +52,12 @@ const BucketListItem = ({
   const [attendeesDialogOpen, setAttendeesDialogOpen] = useState(false);
   const { getComments, getUsersByIds } = useDatabase();
 
-  // Fetch creator's profile
-  useEffect(() => {
-    if (!item.created_by) return;
-    getUsersByIds([item.created_by]).then((users) => {
-      if (users && users.length > 0) {
-        setCreator(users[0]);
-      }
-    });
-  }, [item.created_by, getUsersByIds]);
-
-  // Fetch the latest 2 comments for this item
+  // get latest 2 comments for this item
   useEffect(() => {
     if (!item.id) return;
     getComments(item.id).then(async (data) => {
-      setComments(data.slice(-2)); // Show the last 2 comments
+      setComments(data.slice(-2));
 
-      // Fetch user info for commenters
       const userIds = [...new Set(data.map((c) => c.created_by))];
       const users = await getUsersByIds(userIds);
       const userMap = {};
@@ -109,7 +97,6 @@ const BucketListItem = ({
     const file = event.target.files[0];
     if (file) {
       setImageFile(file);
-      // Create a preview URL for the image
       const previewUrl = URL.createObjectURL(file);
       setEditedItem((prev) => ({ ...prev, image_url: previewUrl }));
     }
@@ -139,7 +126,7 @@ const BucketListItem = ({
       <Box
         sx={{
           height: "200px",
-          backgroundColor: 'background.default',
+          backgroundColor: "background.default",
           position: "relative",
           backgroundImage: item.image_url ? `url(${item.image_url})` : "none",
           backgroundSize: "cover",
@@ -190,9 +177,7 @@ const BucketListItem = ({
           >
             <Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="subtitle1">
-                  {item.title}
-                </Typography>
+                <Typography variant="subtitle1">{item.title}</Typography>
                 <Chip
                   label={
                     <Typography variant="body2">
@@ -215,6 +200,26 @@ const BucketListItem = ({
                   }}
                 />
               </Box>
+              {item.date && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mb: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    color: "primary.main",
+                  }}
+                >
+                  <EventIcon sx={{ fontSize: 16 }} />
+                  {new Date(item.date).toLocaleDateString(undefined, {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </Typography>
+              )}
               <Typography
                 variant="body2"
                 sx={{ mb: 1, display: "flex", alignItems: "center", gap: 0.5 }}
@@ -435,9 +440,7 @@ const BucketListItem = ({
                       "Unknown"}
                     :
                   </Box>
-                  <Box component="span">
-                    {comment.content}
-                  </Box>
+                  <Box component="span">{comment.content}</Box>
                 </Typography>
               </ListItem>
             ))}
@@ -495,9 +498,7 @@ const BucketListItem = ({
         fullWidth
       >
         <DialogTitle sx={{ m: 0, p: 2 }}>
-          <Typography variant="subtitle1">
-            Edit Bucket List Item
-          </Typography>
+          <Typography variant="subtitle1">Edit Bucket List Item</Typography>
           <IconButton
             aria-label="close"
             onClick={handleCloseEditItemDialog}

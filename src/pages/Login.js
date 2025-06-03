@@ -69,7 +69,6 @@ const Login = () => {
 
     try {
       if (activeTab === 0) {
-        // Sign up
         if (!username || !email || !password) {
           throw new Error("Please fill in all fields");
         }
@@ -80,9 +79,8 @@ const Login = () => {
           throw new Error("Password must be at least 6 characters long");
         }
         await signup(username, email, password);
-        // Do NOT navigate to "/" after sign up; show check email message instead
+        // DO NOT navigate to "/" after sign up; show check email message instead
       } else {
-        // Log in
         if (!email || !password) {
           throw new Error("Please fill in all fields");
         }
