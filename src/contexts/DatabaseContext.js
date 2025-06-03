@@ -57,16 +57,35 @@ export function DatabaseProvider({ children }) {
   async function getGroups() {
     const { data: groups, error } = await supabase
       .from("groups")
-      .select("*, group_members!inner(user_id)")
+      .select(
+        `
+        *,
+        group_members!inner(
+          user_id
+        )
+      `
+      )
       .eq("group_members.user_id", currentUser.id);
+
     if (error) throw error;
 
     for (const group of groups) {
-      const { count } = await supabase
+      const { data: members } = await supabase
         .from("group_members")
-        .select("*", { count: "exact", head: true })
+        .select(
+          `
+          user_id,
+          profiles (
+            id,
+            username,
+            avatar_url
+          )
+        `
+        )
         .eq("group_id", group.id);
-      group.memberCount = count;
+
+      group.memberCount = members?.length || 0;
+      group.members = members?.map((member) => member.profiles) || [];
     }
 
     return groups;

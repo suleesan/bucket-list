@@ -548,24 +548,33 @@ const Home = () => {
                           gutterBottom
                           sx={{ fontWeight: "bold" }}
                         >
-                          Members:
+                          Members ({group.memberCount}):
                         </Typography>
                         <Box
-                          sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                          sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 1,
+                            alignItems: "center",
+                          }}
                         >
-                          {group.memberDetails?.map((member) => (
-                            <Typography
+                          {group.members?.map((member) => (
+                            <Box
                               key={member.id}
-                              variant="body2"
                               sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
                                 bgcolor: "background.default",
                                 px: 1,
                                 py: 0.5,
                                 borderRadius: 1,
                               }}
                             >
-                              {member.username}
-                            </Typography>
+                              <Typography variant="body2">
+                                {member.username}
+                              </Typography>
+                            </Box>
                           ))}
                         </Box>
                       </Box>
