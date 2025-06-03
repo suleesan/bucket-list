@@ -183,6 +183,7 @@ export function DatabaseProvider({ children }) {
       "description",
       "location",
       "date",
+      "time",
       "status",
       "image_url",
     ];
