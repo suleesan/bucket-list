@@ -51,7 +51,7 @@ const BucketListItem = ({
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
-  const { getComments, getUsersByIds, deleteComment, addComment, deleteAllCommentsForItem} =
+  const { getComments, getUsersByIds, deleteComment, addComment } =
     useDatabase();
 
   // Fetch creator's profile
