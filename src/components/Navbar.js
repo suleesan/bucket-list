@@ -1,11 +1,12 @@
 import { AppBar, Toolbar, Typography, Button, Box } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDatabase } from "../contexts/DatabaseContext";
 import { useEffect, useState } from "react";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, logout } = useAuth();
   const { getUser } = useDatabase();
   const [profile, setProfile] = useState(null);
@@ -65,16 +66,18 @@ const Navbar = () => {
               </Button>
             </>
           ) : (
-            <Button 
-              variant="contained"
-              onClick={() => navigate("/login")}
-              sx={{
-                bgcolor: "primary.main",
-                "&:hover": { bgcolor: "primary.dark" },
-              }}
-            >
-              Get Started
-            </Button>
+            location.pathname !== "/login" && location.pathname !== "/" && (
+              <Button 
+                variant="contained"
+                onClick={() => navigate("/login")}
+                sx={{
+                  bgcolor: "primary.main",
+                  "&:hover": { bgcolor: "primary.dark" },
+                }}
+              >
+                Get Started
+              </Button>
+            )
           )}
         </Box>
       </Toolbar>

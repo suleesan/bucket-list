@@ -23,6 +23,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ImageIcon from "@mui/icons-material/Image";
+import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDatabase } from "../contexts/DatabaseContext";
@@ -89,24 +90,25 @@ const Home = () => {
             const memberIds = members.map((m) => m.user_id);
             const memberDetails = await getUsersByIds(memberIds);
 
-            return {
-              ...group,
-              items: sortedItems.slice(0, 5),
-              memberDetails,
-            };
-          })
-        );
-        setGroups(groupsWithDetails);
-        setError("");
+                return {
+                  ...group,
+                  items: sortedItems.slice(0, 2), // Get up to 2 items
+                  memberDetails,
+                };
+              })
+            );
+            setGroups(groupsWithDetails);
+            setError("");
+          }
+        }
+      } catch (error) {
+        setError("Failed to load groups");
+        setGroups([]);
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setError("Failed to load groups");
-      setGroups([]);
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   useEffect(() => {
     loadGroupsWithDetails();
@@ -320,9 +322,9 @@ const Home = () => {
               fontWeight: "bold",
             }}
           >
-            Welcome to Rally!
+            Welcome to Rally 💫
           </Typography>
-          <Typography variant="h5" color="text.secondary" paragraph>
+          <Typography variant="subtitle1" paragraph>
             Create and share your bucket list with friends
           </Typography>
           <Box
@@ -330,15 +332,13 @@ const Home = () => {
           >
             <Button
               variant="contained"
-              size="large"
               onClick={() => navigate("/login")}
               sx={{
                 bgcolor: "primary.main",
                 "&:hover": { bgcolor: "primary.dark" },
-                fontSize: "1.2rem",
                 px: 6,
                 py: 1.5,
-                minWidth: "200px",
+                minWidth: "100px",
               }}
             >
               Get Started
@@ -381,6 +381,7 @@ const Home = () => {
           </Button>
           <Button
             variant="contained"
+            startIcon={<AddIcon />}
             onClick={() => setShowCreateDialog(true)}
             sx={{
               bgcolor: "primary.main",
@@ -431,7 +432,7 @@ const Home = () => {
             </Grid>
           ) : (
             groups.map((group) => (
-              <Grid size={{ xs: 12, sm: 6 }} key={group.id}>
+              <Grid size={{ xs: 12, sm: 4 }} key={group.id}>
                 <Card
                   onClick={() => navigate(`/bucket-list/${group.id}`)}
                   sx={{
@@ -520,14 +521,7 @@ const Home = () => {
                       </Tooltip>
                     </Box>
                     <Box sx={{ mb: 2 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          mb: 1,
-                        }}
-                      >
-                        Group Information
-                      </Typography>
+
                       <Box
                         sx={{
                           display: "flex",
@@ -575,72 +569,46 @@ const Home = () => {
                     {group.items && group.items.length > 0 && (
                       <Box sx={{ mt: 2 }}>
                         <Typography
-                          variant="subtitle1"
+                          variant="body2"
                           sx={{
                             mb: 1,
+                            fontWeight: "bold",
                           }}
                         >
                           Upcoming Events
                         </Typography>
-                        {group.items
-                          .filter((item) => item.date) // Only show items with dates
-                          .sort((a, b) => new Date(a.date) - new Date(b.date)) // Sort chronologically
-                          .map((item) => (
+                        {group.items.map((item, index) => (
+                          <Box
+                            key={item.id}
+                            sx={{
+                              backgroundColor: "background.default",
+                              borderRadius: 1,
+                              p: 1.5,
+                              mb: 1,
+                            }}
+                          >
                             <Box
-                              key={item.id}
                               sx={{
-                                backgroundColor: "background.default",
-                                borderRadius: 1,
-                                p: 1.5,
-                                mb: 1,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
                               }}
                             >
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                }}
+                              <Typography
+                                variant="body2"
                               >
-                                <Box>
-                                  <Typography variant="subtitle1">
-                                    {item.title}
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    sx={{ mt: 0.5 }}
-                                  >
-                                    {new Date(item.date).toLocaleDateString(
-                                      undefined,
-                                      {
-                                        weekday: "long",
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric",
-                                      }
-                                    )}
-                                  </Typography>
-                                </Box>
+                                {item.title}
+                              </Typography>
+                              {item.date && (
                                 <Typography
                                   variant="body2"
-                                  color="primary"
-                                  sx={{
-                                    fontWeight: "medium",
-                                    ml: 2,
-                                  }}
                                 >
-                                  {new Date(item.date).toLocaleDateString(
-                                    undefined,
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                    }
-                                  )}
+                                  {new Date(item.date).toLocaleDateString()}
                                 </Typography>
-                              </Box>
+                              )}
                             </Box>
-                          ))}
+                          </Box>
+                        ))}
                       </Box>
                     )}
                   </CardContent>
@@ -748,7 +716,9 @@ const Home = () => {
         fullWidth
       >
         <DialogTitle sx={{ m: 0, p: 2 }}>
-          Edit Group
+          <Typography variant="subtitle1">
+            Edit Group
+          </Typography>
           <IconButton
             aria-label="close"
             onClick={handleCloseEditDialog}
