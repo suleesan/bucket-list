@@ -43,7 +43,7 @@ const theme = createTheme({
       fontFamily: '"Nanum Myeongjo", serif',
       fontSize: "2.5rem",
       fontWeight: 700,
-      color: "#5d9cc0",
+      color: "#000000",
     },
     h2: {
       fontFamily: '"Nanum Myeongjo", serif',
@@ -55,7 +55,7 @@ const theme = createTheme({
       fontFamily: '"Nanum Myeongjo", serif',
       fontSize: "1.75rem",
       fontWeight: 600,
-      color: "#5d9cc0",
+      color: "#000000",
     },
     h4: {
       fontFamily: '"Nanum Myeongjo", serif',
@@ -73,7 +73,7 @@ const theme = createTheme({
       fontFamily: '"Nanum Myeongjo", serif',
       fontSize: "1rem",
       fontWeight: 500,
-      color: "#5d9cc0",
+      color: "#000000",
     },
     subtitle1: {
       fontFamily: '"Figtree", sans-serif',

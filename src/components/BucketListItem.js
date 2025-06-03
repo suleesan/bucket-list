@@ -141,14 +141,14 @@ const BucketListItem = ({
             position: "absolute",
             top: 8,
             right: 8,
-            borderColor: "black",
-            color: "black",
+            borderColor: "text.primary",
+            color: "text.primary",
             backgroundColor: "rgba(255, 255, 255, 0.5)",
             opacity: 0,
             transition: "opacity 0.2s",
             "&:hover": {
-              borderColor: "black",
-              color: "black",
+              borderColor: "text.primary",
+              color: "text.primary",
               backgroundColor: "rgba(255, 255, 255, 0.7)",
             },
             ".MuiCard-root:hover &": {
@@ -195,7 +195,7 @@ const BucketListItem = ({
                         : item.status === "planning"
                         ? theme.palette.status.planning
                         : theme.palette.status.idea,
-                    color: "black",
+                    color: "text.primary",
                     fontWeight: 500,
                   }}
                 />
@@ -262,14 +262,14 @@ const BucketListItem = ({
                         label={upvArr[0].username}
                         size="small"
                         sx={{
-                          backgroundColor: "primary.light",
-                          color: "primary.contrastText",
+                          backgroundColor: "background.default",
                           height: "20px",
                           verticalAlign: "middle",
                           mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
-                            fontSize: "0.75rem",
+                            fontSize: "0.875rem",
+                            fontFamily: (theme) => theme.typography.body2.fontFamily,
                             lineHeight: "20px",
                             display: "flex",
                             alignItems: "center",
@@ -305,14 +305,14 @@ const BucketListItem = ({
                         label={upvArr[0].username}
                         size="small"
                         sx={{
-                          backgroundColor: "primary.light",
-                          color: "primary.contrastText",
+                          backgroundColor: "background.default",
                           height: "20px",
                           verticalAlign: "middle",
                           mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
-                            fontSize: "0.75rem",
+                            fontSize: "0.875rem",
+                            fontFamily: (theme) => theme.typography.body2.fontFamily,
                             lineHeight: "20px",
                             display: "flex",
                             alignItems: "center",
@@ -324,14 +324,14 @@ const BucketListItem = ({
                         label={upvArr[1].username}
                         size="small"
                         sx={{
-                          backgroundColor: "primary.light",
-                          color: "primary.contrastText",
+                          backgroundColor: "background.default",
                           height: "20px",
                           verticalAlign: "middle",
                           mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
-                            fontSize: "0.75rem",
+                            fontSize: "0.875rem",
+                            fontFamily: (theme) => theme.typography.body2.fontFamily,
                             lineHeight: "20px",
                             display: "flex",
                             alignItems: "center",
@@ -362,14 +362,14 @@ const BucketListItem = ({
                         label={upvArr[0].username}
                         size="small"
                         sx={{
-                          backgroundColor: "primary.light",
-                          color: "primary.contrastText",
+                          backgroundColor: "background.default",
                           height: "20px",
                           verticalAlign: "middle",
                           mx: 0.5,
                           "& .MuiChip-label": {
                             px: 1,
-                            fontSize: "0.75rem",
+                            fontSize: "0.875rem",
+                            fontFamily: (theme) => theme.typography.body2.fontFamily,
                             lineHeight: "20px",
                             display: "flex",
                             alignItems: "center",
@@ -387,41 +387,10 @@ const BucketListItem = ({
             </Box>
           </Box>
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0, mt: "auto" }}>
-          <Button
-            startIcon={
-              item.upvotes?.includes(currentUser.id) ? (
-                <EventAvailableIcon sx={{ color: "primary.main" }} />
-              ) : (
-                <EventIcon sx={{ color: "black" }} />
-              )
-            }
-            onClick={() =>
-              item.upvotes?.includes(currentUser.id)
-                ? onRemoveUpvote(item.id)
-                : onUpvote(item.id)
-            }
-            sx={{
-              color: item.upvotes?.includes(currentUser.id)
-                ? "primary.main"
-                : "black",
-              minWidth: 0,
-              px: 0.5,
-              mr: 0.5,
-            }}
-          >
-            {item.upvotes?.includes(currentUser.id) ? "Rallied" : "Rally"}
-          </Button>
-          <Button
-            startIcon={<ChatBubbleOutlineIcon />}
-            onClick={() => onOpenComments(item.id)}
-            sx={{ color: "black", minWidth: 0, px: 0.5 }}
-          >
-            {commentCount > 0 ? commentCount : ""}
-          </Button>
-        </Box>
+        
+        {/* Comments section moved here */}
         {comments.length > 0 && (
-          <List sx={{ py: 0, mt: 1 }}>
+          <List sx={{ py: 0 }}>
             {comments.map((comment) => (
               <ListItem key={comment.id} sx={{ py: 0.5, pl: 0 }}>
                 <Typography
@@ -446,6 +415,43 @@ const BucketListItem = ({
             ))}
           </List>
         )}
+        
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0, mt: 2 }}>
+          <Button
+            startIcon={
+              item.upvotes?.includes(currentUser.id) ? (
+                <span>✅</span>
+              ) : (
+                <span>❓</span>
+              )
+            }
+            onClick={() =>
+              item.upvotes?.includes(currentUser.id)
+                ? onRemoveUpvote(item.id)
+                : onUpvote(item.id)
+            }
+            sx={{
+              color: item.upvotes?.includes(currentUser.id)
+                ? "primary.main"
+                : "text.primary",
+              minWidth: 0,
+              px: 0.5,
+              mr: 0.5,
+              "&:hover": {
+                px: 1.5,
+              },
+            }}
+          >
+            {item.upvotes?.includes(currentUser.id) ? "Rallied" : "Rally"}
+          </Button>
+          <Button
+            startIcon={<ChatBubbleOutlineIcon />}
+            onClick={() => onOpenComments(item.id)}
+            sx={{ color: "text.primary", minWidth: 0, px: 0.5 }}
+          >
+            {commentCount > 0 ? commentCount : ""}
+          </Button>
+        </Box>
       </CardContent>
 
       {/* Attendees Dialog */}
@@ -456,7 +462,9 @@ const BucketListItem = ({
         fullWidth
       >
         <DialogTitle sx={{ m: 0, p: 2 }}>
-          Attendees
+          <Typography variant="subtitle1">
+            Attendees
+          </Typography>
           <IconButton
             aria-label="close"
             onClick={handleCloseAttendeesDialog}
@@ -464,7 +472,6 @@ const BucketListItem = ({
               position: "absolute",
               right: 8,
               top: 8,
-              color: (theme) => theme.palette.grey[500],
             }}
             size="large"
           >
@@ -477,12 +484,12 @@ const BucketListItem = ({
               <Chip
                 key={user.id}
                 label={user.username}
-                size="medium"
                 sx={{
-                  backgroundColor: "primary.light",
-                  color: "primary.contrastText",
+                  backgroundColor: "background.default",
                   "& .MuiChip-label": {
                     px: 1,
+                    fontSize: "0.875rem",
+                    fontFamily: (theme) => theme.typography.body2.fontFamily,
                   },
                 }}
               />
