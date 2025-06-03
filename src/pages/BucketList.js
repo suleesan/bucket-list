@@ -595,7 +595,14 @@ const BucketList = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} disabled={loading}>
+          <Button 
+            onClick={() => {
+              setOpenDialog(false);
+              setImageFile(null);
+              setPreviewUrl(null);
+            }} 
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button
