@@ -97,6 +97,11 @@ const theme = createTheme({
       fontSize: "0.875rem",
       color: "#000000",
     },
+    body3: {
+      fontFamily: '"Figtree", sans-serif',
+      fontSize: "0.7rem",
+      color: "#000000",
+    },
     button: {
       fontFamily: '"Figtree", sans-serif',
       textTransform: "none",

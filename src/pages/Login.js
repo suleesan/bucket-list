@@ -79,7 +79,7 @@ const Login = () => {
           throw new Error("Password must be at least 6 characters long");
         }
         await signup(username, email, password);
-        // DO NOT navigate to "/" after sign up; show check email message instead
+
       } else {
         if (!email || !password) {
           throw new Error("Please fill in all fields");
