@@ -58,7 +58,6 @@ const Home = () => {
     getBucketListItems,
     getUsersByIds,
     uploadImage,
-    loadGroups,
   } = useDatabase();
 
   const loadGroupsWithDetails = async () => {
@@ -90,25 +89,24 @@ const Home = () => {
             const memberIds = members.map((m) => m.user_id);
             const memberDetails = await getUsersByIds(memberIds);
 
-                return {
-                  ...group,
-                  items: sortedItems.slice(0, 2), // Get up to 2 items
-                  memberDetails,
-                };
-              })
-            );
-            setGroups(groupsWithDetails);
-            setError("");
-          }
-        }
-      } catch (error) {
-        setError("Failed to load groups");
-        setGroups([]);
-        console.error(error);
-      } finally {
-        setLoading(false);
+            return {
+              ...group,
+              items: sortedItems.slice(0, 2), // fetch 2 items
+              memberDetails,
+            };
+          })
+        );
+        setGroups(groupsWithDetails);
+        setError("");
       }
-    };
+    } catch (error) {
+      setError("Failed to load groups");
+      setGroups([]);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadGroupsWithDetails();
@@ -521,7 +519,6 @@ const Home = () => {
                       </Tooltip>
                     </Box>
                     <Box sx={{ mb: 2 }}>
-
                       <Box
                         sx={{
                           display: "flex",
@@ -594,15 +591,11 @@ const Home = () => {
                                 alignItems: "center",
                               }}
                             >
-                              <Typography
-                                variant="body2"
-                              >
+                              <Typography variant="body2">
                                 {item.title}
                               </Typography>
                               {item.date && (
-                                <Typography
-                                  variant="body2"
-                                >
+                                <Typography variant="body2">
                                   {new Date(item.date).toLocaleDateString()}
                                 </Typography>
                               )}
@@ -716,9 +709,7 @@ const Home = () => {
         fullWidth
       >
         <DialogTitle sx={{ m: 0, p: 2 }}>
-          <Typography variant="subtitle1">
-            Edit Group
-          </Typography>
+          <Typography variant="subtitle1">Edit Group</Typography>
           <IconButton
             aria-label="close"
             onClick={handleCloseEditDialog}
