@@ -382,7 +382,6 @@ export function DatabaseProvider({ children }) {
     updateGroup,
     deleteGroup,
     uploadImage,
-    loadGroups: getGroups,
   };
 
   return (
