@@ -180,6 +180,13 @@ const BucketListItem = ({
     }
   };
 
+  const canDeleteComment = (comment) => {
+    return currentUser && (
+      comment.created_by === currentUser.id || 
+      item.created_by === currentUser.id
+    );
+  };
+  
   return (
     <Card
       onClick={handleOpenDetailDialog}
@@ -947,8 +954,7 @@ const BucketListItem = ({
                               }
                             )}
                           </Typography>
-                          {currentUser &&
-                            comment.created_by === currentUser.id && (
+                          {canDeleteComment(comment) && (
                               <IconButton
                                 size="small"
                                 onClick={(e) => {
