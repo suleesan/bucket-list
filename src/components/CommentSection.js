@@ -73,7 +73,7 @@ const CommentSection = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ m: 0, p: 2 }}>
-        <Typography variant="h5" fontWeight="bold">
+        <Typography variant="subtitle1" component="div" fontWeight="bold">
           Comments for {itemTitle}
         </Typography>
         <IconButton

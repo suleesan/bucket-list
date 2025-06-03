@@ -56,6 +56,7 @@ const BucketList = () => {
     description: "",
     location: "",
     date: "",
+    time: "",
     status: "idea",
   });
 
@@ -213,6 +214,7 @@ const BucketList = () => {
         description: "",
         location: "",
         date: "",
+        time: "",
         status: "idea",
         image_url: null,
       });
@@ -497,7 +499,7 @@ const BucketList = () => {
         fullWidth
       >
         <DialogTitle sx={{ pt: 3 }}>
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="subtitle1" component="div" fontWeight="bold">
             Add New Bucket List Item
           </Typography>
         </DialogTitle>
@@ -548,6 +550,17 @@ const BucketList = () => {
               onChange={(e) => setNewItem({ ...newItem, date: e.target.value })}
               disabled={loading}
               InputLabelProps={{ shrink: true }}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Time"
+              type="time"
+              value={newItem.time}
+              onChange={(e) => setNewItem({ ...newItem, time: e.target.value })}
+              disabled={loading}
+              InputLabelProps={{ shrink: true }}
+              sx={{ mb: 2 }}
             />
             <TextField
               select
@@ -595,12 +608,12 @@ const BucketList = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => {
               setOpenDialog(false);
               setImageFile(null);
               setPreviewUrl(null);
-            }} 
+            }}
             disabled={loading}
           >
             Cancel
@@ -625,7 +638,11 @@ const BucketList = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ color: "black" }}>Edit Bucket List Item</DialogTitle>
+        <DialogTitle sx={{ color: "black" }}>
+          <Typography variant="subtitle1" component="div" fontWeight="bold">
+            Edit Bucket List Item
+          </Typography>
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
             <TextField
