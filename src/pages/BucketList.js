@@ -6,24 +6,15 @@ import {
   Button,
   Box,
   Grid,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Alert,
   CircularProgress,
-  MenuItem,
-  IconButton,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import { useDatabase } from "../contexts/DatabaseContext";
 import { useAuth } from "../contexts/AuthContext";
 import BucketListItem from "../components/BucketListItem";
-import CommentSection from "../components/CommentSection";
+import BucketListDialogs from "../components/BucketListDialogs";
 import { supabase } from "../supabase";
-import ImageIcon from "@mui/icons-material/Image";
 
 const BucketList = () => {
   const { groupId } = useParams();
@@ -42,8 +33,6 @@ const BucketList = () => {
     getUsersByIds,
     rsvpBucketListItem,
     removeRsvpBucketListItem,
-    deleteDateSuggestion,
-    updateDateSuggestion,
     deleteBucketListItem,
     uploadImage,
     updateBucketListItem,
@@ -266,28 +255,6 @@ const BucketList = () => {
     }
   };
 
-  const handleAddDateSuggestion = async (itemId, date) => {
-    try {
-      await addDateSuggestion(itemId, date);
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                dateSuggestions: [
-                  ...(item.dateSuggestions || []),
-                  { date, suggested_by: currentUser.id },
-                ],
-              }
-            : item
-        )
-      );
-    } catch (error) {
-      setError("Failed to add date suggestion");
-      console.error(error);
-    }
-  };
-
   const handleEditItem = async (itemId, editedItem) => {
     try {
       await updateBucketListItem(itemId, editedItem);
@@ -308,17 +275,17 @@ const BucketList = () => {
     setCommentDialogOpen(true);
   };
 
-  const handleCloseComments = () => {
-    setCommentDialogOpen(false);
-    setCommentItemId(null);
-  };
+  // const handleCloseComments = () => {
+  //   setCommentDialogOpen(false);
+  //   setCommentItemId(null);
+  // };
 
-  const handleCommentCountChange = (itemId, count) => {
-    setCommentCounts((prev) => ({
-      ...prev,
-      [itemId]: count,
-    }));
-  };
+  // const handleCommentCountChange = (itemId, count) => {
+  //   setCommentCounts((prev) => ({
+  //     ...prev,
+  //     [itemId]: count,
+  //   }));
+  // };
 
   const handleDeleteItem = async (itemId) => {
     try {
@@ -483,235 +450,23 @@ const BucketList = () => {
         </Grid>
       )}
 
-      <CommentSection
-        open={commentDialogOpen}
-        onClose={handleCloseComments}
-        itemId={commentItemId}
-        currentUser={currentUser}
-        itemTitle={items.find((item) => item.id === commentItemId)?.title}
-        onCommentCountChange={handleCommentCountChange}
+      <BucketListDialogs
+        openDialog={openDialog}
+        editDialog={editDialog}
+        newItem={newItem}
+        editingItem={editingItem}
+        loading={loading}
+        previewUrl={previewUrl}
+        onCloseDialog={() => setOpenDialog(false)}
+        onCloseEditDialog={() => setEditDialog(false)}
+        onAddItem={handleAddItem}
+        onEditItem={handleEditItem}
+        onImageChange={handleImageChange}
+        setNewItem={setNewItem}
+        setEditingItem={setEditingItem}
+        setImageFile={setImageFile}
+        setPreviewUrl={setPreviewUrl}
       />
-
-      <Dialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ pt: 3 }}>
-          <Typography variant="subtitle1" component="div" fontWeight="bold">
-            Add New Bucket List Item
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              label="Title"
-              value={newItem.title}
-              onChange={(e) =>
-                setNewItem({ ...newItem, title: e.target.value })
-              }
-              disabled={loading}
-              sx={{ mb: 2 }}
-              inputProps={{
-                maxLength: 100,
-                pattern: ".*",
-                inputMode: "text",
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              multiline
-              rows={3}
-              value={newItem.description}
-              onChange={(e) =>
-                setNewItem({ ...newItem, description: e.target.value })
-              }
-              disabled={loading}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Location"
-              value={newItem.location}
-              onChange={(e) =>
-                setNewItem({ ...newItem, location: e.target.value })
-              }
-              disabled={loading}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Date"
-              type="date"
-              value={newItem.date}
-              onChange={(e) => setNewItem({ ...newItem, date: e.target.value })}
-              disabled={loading}
-              InputLabelProps={{ shrink: true }}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Time"
-              type="time"
-              value={newItem.time}
-              onChange={(e) => setNewItem({ ...newItem, time: e.target.value })}
-              disabled={loading}
-              InputLabelProps={{ shrink: true }}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              select
-              label="Status"
-              value={newItem.status}
-              onChange={(e) =>
-                setNewItem({ ...newItem, status: e.target.value })
-              }
-              fullWidth
-              sx={{ mt: 2 }}
-            >
-              <MenuItem value="idea">Idea</MenuItem>
-              <MenuItem value="planning">Planning</MenuItem>
-              <MenuItem value="done">Done</MenuItem>
-            </TextField>
-
-            <Button
-              component="label"
-              variant="outlined"
-              startIcon={<ImageIcon />}
-              fullWidth
-              sx={{ mt: 2, mb: 2 }}
-            >
-              Upload Image
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleImageChange}
-              />
-            </Button>
-            {previewUrl && (
-              <Box
-                sx={{
-                  width: "100%",
-                  height: "200px",
-                  backgroundImage: `url(${previewUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  mb: 2,
-                  borderRadius: 1,
-                }}
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setOpenDialog(false);
-              setImageFile(null);
-              setPreviewUrl(null);
-            }}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAddItem}
-            variant="contained"
-            disabled={loading || !newItem.title.trim()}
-            sx={{
-              bgcolor: "primary.main",
-              "&:hover": { bgcolor: "primary.dark" },
-            }}
-          >
-            Add Item
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={editDialog}
-        onClose={() => setEditDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ color: "black" }}>
-          <Typography variant="subtitle1" component="div" fontWeight="bold">
-            Edit Bucket List Item
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              label="Title"
-              value={editingItem?.title || ""}
-              onChange={(e) =>
-                setEditingItem({ ...editingItem, title: e.target.value })
-              }
-              disabled={loading}
-              sx={{ mb: 2 }}
-              inputProps={{
-                maxLength: 100,
-                pattern: ".*",
-                inputMode: "text",
-              }}
-            />
-            <TextField
-              fullWidth
-              label="Description"
-              multiline
-              rows={3}
-              value={editingItem?.description || ""}
-              onChange={(e) =>
-                setEditingItem({ ...editingItem, description: e.target.value })
-              }
-              disabled={loading}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Location"
-              value={editingItem?.location || ""}
-              onChange={(e) =>
-                setEditingItem({ ...editingItem, location: e.target.value })
-              }
-              disabled={loading}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Date"
-              type="date"
-              value={editingItem?.date || ""}
-              onChange={(e) =>
-                setEditingItem({ ...editingItem, date: e.target.value })
-              }
-              disabled={loading}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialog(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleEditItem}
-            variant="contained"
-            disabled={loading || !editingItem?.title.trim()}
-            sx={{
-              bgcolor: "primary.main",
-              "&:hover": { bgcolor: "primary.dark" },
-            }}
-          >
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };
