@@ -165,7 +165,7 @@ const BucketListDialogs = ({
               "&:hover": { bgcolor: "primary.dark" },
             }}
           >
-            Add Item
+            Add Activity
           </Button>
         </DialogActions>
       </Dialog>
