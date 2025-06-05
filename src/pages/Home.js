@@ -8,57 +8,38 @@ import {
   Grid,
   Card,
   CardContent,
-  TextField,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   IconButton,
   Tooltip,
   Snackbar,
   CircularProgress,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ImageIcon from "@mui/icons-material/Image";
 import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDatabase } from "../contexts/DatabaseContext";
 import MuiAlert from "@mui/material/Alert";
 import { supabase } from "../supabase";
+import { useGroupDialogs } from "../hooks/useGroupDialogs";
 
 const Home = () => {
   const [groups, setGroups] = useState([]);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [showJoinDialog, setShowJoinDialog] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [editImageFile, setEditImageFile] = useState(null);
-  const [editPreviewUrl, setEditPreviewUrl] = useState(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { getGroups, getBucketListItems, getUsersByIds } = useDatabase();
   const {
-    createGroup,
-    getGroups,
-    joinGroupByCode,
-    updateGroup,
-    deleteGroup,
-    getBucketListItems,
-    getUsersByIds,
-    uploadImage,
-  } = useDatabase();
+    setShowJoinDialog,
+    setShowCreateDialog,
+    loading,
+    setLoading,
+    error,
+    setError,
+    handleOpenEditDialog,
+    dialogs,
+  } = useGroupDialogs();
 
   const loadGroupsWithDetails = async () => {
     try {
@@ -112,184 +93,9 @@ const Home = () => {
     loadGroupsWithDetails();
   }, [currentUser, getGroups, getBucketListItems, getUsersByIds]);
 
-  const handleImageChange = (event, isEdit = false) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (isEdit) {
-        setEditImageFile(file);
-        const previewUrl = URL.createObjectURL(file);
-        setEditPreviewUrl(previewUrl);
-        setEditingGroup((prev) => ({ ...prev, image_url: previewUrl }));
-      } else {
-        setImageFile(file);
-        const previewUrl = URL.createObjectURL(file);
-        setPreviewUrl(previewUrl);
-      }
-    }
-  };
-
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
-    setLoading(true);
-    setError("");
-
-    try {
-      let imageUrl = null;
-      if (imageFile) {
-        try {
-          imageUrl = await uploadImage(
-            imageFile,
-            `groups/${Date.now()}_${imageFile.name}`
-          );
-        } catch (uploadError) {
-          // keep detailed for future reference
-          console.error("Image upload failed for new group:", {
-            error: uploadError,
-            message: uploadError.message,
-            details: uploadError.details,
-            hint: uploadError.hint,
-            code: uploadError.code,
-          });
-          throw uploadError;
-        }
-      }
-
-      const groupId = await createGroup(newGroupName, imageUrl);
-
-      setNewGroupName("");
-      setImageFile(null);
-      setPreviewUrl(null);
-      setShowCreateDialog(false);
-      navigate(`/bucket-list/${groupId}`);
-    } catch (error) {
-      console.error("Failed to create group:", {
-        error: error,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
-      setError("Failed to create group");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleJoinGroup = async () => {
-    if (!joinCode.trim()) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const groupId = await joinGroupByCode(joinCode.toUpperCase());
-      setShowJoinDialog(false);
-      setJoinCode("");
-      navigate(`/bucket-list/${groupId}`);
-    } catch (error) {
-      setError("Invalid group code or failed to join group");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     setCopySuccess(true);
-  };
-
-  const handleOpenEditDialog = (group) => {
-    setEditingGroup(group);
-    setEditDialogOpen(true);
-  };
-
-  const handleCloseEditDialog = () => {
-    if (editPreviewUrl) {
-      URL.revokeObjectURL(editPreviewUrl);
-    }
-    setEditDialogOpen(false);
-    setEditingGroup(null);
-    setEditImageFile(null);
-    setEditPreviewUrl(null);
-  };
-
-  const handleSaveEdit = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      let imageUrl = editingGroup.image_url;
-      if (editImageFile) {
-        try {
-          imageUrl = await uploadImage(
-            editImageFile,
-            `groups/${editingGroup.id}_${Date.now()}_${editImageFile.name}`
-          );
-        } catch (uploadError) {
-          console.error("Image upload failed for group edit:", {
-            error: uploadError,
-            message: uploadError.message,
-            details: uploadError.details,
-            hint: uploadError.hint,
-            code: uploadError.code,
-          });
-          throw uploadError;
-        }
-      }
-
-      await updateGroup(editingGroup.id, {
-        ...editingGroup,
-        image_url: imageUrl,
-      });
-
-      setEditDialogOpen(false);
-      setEditingGroup(null);
-      setEditImageFile(null);
-      setEditPreviewUrl(null);
-
-      await loadGroupsWithDetails();
-    } catch (error) {
-      console.error("Failed to update group:", {
-        error: error,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-      });
-      setError("Failed to update group");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = () => {
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!editingGroup) return;
-
-    setLoading(true);
-    setError("");
-    setDeleteConfirmOpen(false);
-
-    try {
-      await deleteGroup(editingGroup.id);
-      handleCloseEditDialog();
-      setDeleteSuccess(true);
-      setGroups(groups.filter((g) => g.id !== editingGroup.id));
-      await loadGroupsWithDetails();
-    } catch (error) {
-      console.error("Error deleting group:", error);
-      setError(error.message || "Failed to delete group. Please try again.");
-      setDeleteConfirmOpen(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteConfirmOpen(false);
   };
 
   if (!currentUser) {
@@ -412,6 +218,7 @@ const Home = () => {
           <CircularProgress />
         </Box>
       ) : (
+        // GROUPS
         <Grid container spacing={3}>
           {groups.length === 0 ? (
             <Grid item xs={12}>
@@ -628,214 +435,8 @@ const Home = () => {
         </Grid>
       )}
 
-      <Dialog open={showJoinDialog} onClose={() => setShowJoinDialog(false)}>
-        <DialogTitle>Join a Group</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Group Code"
-            type="text"
-            fullWidth
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="Enter 6-digit group code"
-            inputProps={{ maxLength: 6 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowJoinDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleJoinGroup}
-            variant="contained"
-            disabled={!joinCode.trim() || loading}
-          >
-            Join
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-      >
-        <DialogTitle>Create a New Group</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Group Name"
-            type="text"
-            fullWidth
-            value={newGroupName}
-            onChange={(e) => setNewGroupName(e.target.value)}
-            disabled={loading}
-            inputProps={{
-              maxLength: 50,
-              pattern: ".*",
-              inputMode: "text",
-            }}
-            sx={{ mb: 2 }}
-          />
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<ImageIcon />}
-            fullWidth
-            sx={{ mb: 2 }}
-          >
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={(e) => handleImageChange(e, false)}
-            />
-          </Button>
-          {previewUrl && (
-            <Box
-              sx={{
-                width: "100%",
-                height: "200px",
-                backgroundImage: `url(${previewUrl})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                mb: 2,
-                borderRadius: 1,
-              }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleCreateGroup}
-            variant="contained"
-            disabled={!newGroupName.trim() || loading}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
-        open={editDialogOpen}
-        onClose={handleCloseEditDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ m: 0, p: 2 }}>
-          <Typography variant="subtitle1">Edit Group</Typography>
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseEditDialog}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-            size="large"
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <TextField
-            fullWidth
-            label="Group Name"
-            value={editingGroup?.name || ""}
-            onChange={(e) =>
-              setEditingGroup({ ...editingGroup, name: e.target.value })
-            }
-            sx={{ mb: 2, mt: 2 }}
-            inputProps={{
-              maxLength: 50,
-              pattern: ".*",
-              inputMode: "text",
-            }}
-          />
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<ImageIcon />}
-            fullWidth
-            sx={{ mb: 2 }}
-          >
-            Upload Image
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={(e) => handleImageChange(e, true)}
-            />
-          </Button>
-          {(editPreviewUrl || editingGroup?.image_url) && (
-            <Box
-              sx={{
-                width: "100%",
-                height: "200px",
-                backgroundImage: `url(${
-                  editPreviewUrl || editingGroup?.image_url
-                })`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                mb: 2,
-                borderRadius: 1,
-              }}
-            />
-          )}
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: "space-between", px: 2 }}>
-          <Button
-            onClick={handleDeleteClick}
-            color="error"
-            startIcon={<DeleteIcon />}
-            disabled={loading}
-          >
-            Delete Group
-          </Button>
-          <Box>
-            <Button
-              onClick={handleCloseEditDialog}
-              sx={{ mr: 1 }}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              variant="contained"
-              disabled={!editingGroup?.name?.trim() || loading}
-            >
-              Save Changes
-            </Button>
-          </Box>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete this group? This action cannot be
-            undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteCancel} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-            disabled={loading}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* DIALOGS (abstracted) */}
+      {dialogs}
 
       <Snackbar
         open={copySuccess}
