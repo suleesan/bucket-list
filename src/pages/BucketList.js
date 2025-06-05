@@ -373,7 +373,7 @@ const BucketList = () => {
               "&:hover": { bgcolor: "primary.dark" },
             }}
           >
-            Add Item
+            Add Activity
           </Button>
         </Box>
       </Box>
@@ -422,7 +422,7 @@ const BucketList = () => {
           </Typography>
           <Typography variant="body2" color="primary.main">
             {statusFilter === "all"
-              ? 'Click the "Add Item" button to create your first bucket list item'
+              ? 'Click the "Add Activity" button to create your first bucket list item'
               : `Try selecting a different filter or add a new ${statusFilter} item`}
           </Typography>
         </Grid>
