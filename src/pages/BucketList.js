@@ -28,7 +28,6 @@ const BucketList = () => {
   const {
     createBucketListItem,
     getBucketListItems,
-    addDateSuggestion,
     getGroup,
     getUsersByIds,
     rsvpBucketListItem,
