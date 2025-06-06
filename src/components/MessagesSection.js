@@ -12,7 +12,7 @@ import {
 import { useDatabase } from "../contexts/DatabaseContext";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const MessagesSection = ({ itemId, currentUser, maxHeight }) => {
+const MessagesSection = ({ itemId, currentUser, maxHeight, itemCreatorId }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [userMap, setUserMap] = useState({});
@@ -64,6 +64,14 @@ const MessagesSection = ({ itemId, currentUser, maxHeight }) => {
     setCommentCount(count);
   };
 
+  const canDeleteComment = (comment) => {
+    return (
+      currentUser &&
+      (comment.created_by === currentUser.id ||
+        itemCreatorId === currentUser.id)
+    );
+  };
+
   const handleDeleteComment = async (commentId) => {
     await deleteComment(commentId);
     const commentData = await getComments(itemId);
@@ -88,8 +96,7 @@ const MessagesSection = ({ itemId, currentUser, maxHeight }) => {
             alignItems="flex-start"
             key={comment.id}
             secondaryAction={
-              currentUser &&
-              comment.created_by === currentUser.id && (
+              canDeleteComment(comment) && (
                 <IconButton
                   edge="end"
                   aria-label="delete"

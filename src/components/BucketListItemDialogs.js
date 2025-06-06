@@ -478,7 +478,11 @@ const BucketListItemDialogs = ({
             )}
 
             {/* Messages */}
-            <MessagesSection itemId={item.id} currentUser={currentUser} />
+            <MessagesSection
+              itemId={item.id}
+              currentUser={currentUser}
+              itemCreatorId={item.created_by}
+            />
           </Box>
         </DialogContent>
       </Dialog>
