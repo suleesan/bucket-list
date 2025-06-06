@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useDatabase } from "../contexts/DatabaseContext";
 import MuiAlert from "@mui/material/Alert";
-import { supabase } from "../supabase";
 import { GroupDialogs } from "../components/GroupDialogs";
 
 const Home = () => {
@@ -54,6 +53,7 @@ const Home = () => {
     uploadImage,
   } = useDatabase();
 
+  // fetch all user's groups with snapshot of 2 events + list of members
   const loadGroupsWithDetails = async () => {
     try {
       if (currentUser) {
@@ -75,18 +75,9 @@ const Home = () => {
               return new Date(a.date) - new Date(b.date);
             });
 
-            const { data: members } = await supabase
-              .from("group_members")
-              .select("user_id")
-              .eq("group_id", group.id);
-
-            const memberIds = members.map((m) => m.user_id);
-            const memberDetails = await getUsersByIds(memberIds);
-
             return {
               ...group,
               items: sortedItems.slice(0, 2), // fetch 2 items
-              memberDetails,
             };
           })
         );
@@ -104,7 +95,7 @@ const Home = () => {
 
   useEffect(() => {
     loadGroupsWithDetails();
-  }, [currentUser, getGroups, getBucketListItems, getUsersByIds]);
+  }, [currentUser, getGroups, getBucketListItems]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -192,6 +183,7 @@ const Home = () => {
     }
   };
 
+  // open edit dialog for group
   const handleOpenEditDialog = (group) => {
     setEditingGroup(group);
     setEditDialogOpen(true);
@@ -207,6 +199,7 @@ const Home = () => {
     setEditPreviewUrl(null);
   };
 
+  // save edited group
   const handleSaveEdit = async () => {
     setLoading(true);
     setError("");
@@ -256,10 +249,12 @@ const Home = () => {
     }
   };
 
+  // open delete dialog, but don't delete yet
   const handleDeleteClick = () => {
     setDeleteConfirmOpen(true);
   };
 
+  // actually delete the group
   const handleDeleteConfirm = async () => {
     if (!editingGroup) return;
 
@@ -342,6 +337,7 @@ const Home = () => {
     );
   }
 
+  // authenticated user --> home page
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Box

@@ -12,25 +12,28 @@ import {
 import { useDatabase } from "../contexts/DatabaseContext";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const MessagesSection = ({
-  itemId,
-  currentUser,
-  onCommentCountChange,
-  maxHeight,
-}) => {
+const MessagesSection = ({ itemId, currentUser, maxHeight }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [userMap, setUserMap] = useState({});
-  const { getComments, addComment, deleteComment, getUsersByIds } =
-    useDatabase();
+  const [commentCount, setCommentCount] = useState(0);
+  const {
+    getComments,
+    addComment,
+    deleteComment,
+    getUsersByIds,
+    getCommentCount,
+  } = useDatabase();
 
+  // fetch messages, message count, and users
   useEffect(() => {
     if (!itemId) return;
     let isMounted = true;
     getComments(itemId).then((commentData) => {
       if (!isMounted) return;
       setComments(commentData);
-      onCommentCountChange(itemId, commentData.length);
+
+      // fetch each message's user
       const uids = Array.from(
         new Set(commentData.map((c) => c.created_by).filter(Boolean))
       );
@@ -42,10 +45,14 @@ const MessagesSection = ({
         });
       }
     });
+    getCommentCount(itemId).then((count) => {
+      if (!isMounted) return;
+      setCommentCount(count);
+    });
     return () => {
       isMounted = false;
     };
-  }, [itemId, getComments, getUsersByIds, onCommentCountChange]);
+  }, [itemId, getComments, getUsersByIds, getCommentCount]);
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
@@ -53,20 +60,22 @@ const MessagesSection = ({
     setNewComment("");
     const commentData = await getComments(itemId);
     setComments(commentData);
-    onCommentCountChange(itemId, commentData.length);
+    const count = await getCommentCount(itemId);
+    setCommentCount(count);
   };
 
   const handleDeleteComment = async (commentId) => {
     await deleteComment(commentId);
     const commentData = await getComments(itemId);
     setComments(commentData);
-    onCommentCountChange(itemId, commentData.length);
+    const count = await getCommentCount(itemId);
+    setCommentCount(count);
   };
 
   return (
     <Box>
       <Typography variant="subtitle2" sx={{ mb: 2, color: "text.secondary" }}>
-        Messages
+        Messages {commentCount > 0 && `(${commentCount})`}
       </Typography>
       <List sx={{ maxHeight: maxHeight || "300px", overflowY: "auto", mb: 2 }}>
         {comments.length === 0 && (

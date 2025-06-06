@@ -19,7 +19,6 @@ const BucketListItem = ({
   onEdit,
   onUpvote,
   onRemoveUpvote,
-  onOpenComments,
   onDelete,
   onImageUpload,
 }) => {
@@ -27,7 +26,6 @@ const BucketListItem = ({
   const [editedItem, setEditedItem] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [creator, setCreator] = useState(null);
-  const [attendeesDialogOpen, setAttendeesDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const { getUsersByIds } = useDatabase();
 
@@ -73,14 +71,6 @@ const BucketListItem = ({
       const previewUrl = URL.createObjectURL(file);
       setEditedItem((prev) => ({ ...prev, image_url: previewUrl }));
     }
-  };
-
-  const handleOpenAttendeesDialog = () => {
-    setAttendeesDialogOpen(true);
-  };
-
-  const handleCloseAttendeesDialog = () => {
-    setAttendeesDialogOpen(false);
   };
 
   const handleOpenDetailDialog = () => {
@@ -351,18 +341,15 @@ const BucketListItem = ({
         creator={creator}
         editItemDialogOpen={editItemDialogOpen}
         detailDialogOpen={detailDialogOpen}
-        attendeesDialogOpen={attendeesDialogOpen}
         editedItem={editedItem}
         onCloseEditDialog={handleCloseEditItemDialog}
         onCloseDetailDialog={handleCloseDetailDialog}
-        onCloseAttendeesDialog={handleCloseAttendeesDialog}
         onEditItem={setEditedItem}
         onSaveItemEdit={handleSaveItemEdit}
         onDeleteItem={handleDeleteItem}
         onImageChange={handleImageChange}
         onUpvote={onUpvote}
         onRemoveUpvote={onRemoveUpvote}
-        onOpenComments={onOpenComments}
       />
     </>
   );

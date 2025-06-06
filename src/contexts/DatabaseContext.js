@@ -65,11 +65,12 @@ export function DatabaseProvider({ children }) {
         )
       `
       )
-      .eq("group_members.user_id", currentUser.id);
+      .eq("group_members.user_id", currentUser.id); // only get groups where user is a member
 
     if (error) throw error;
 
     for (const group of groups) {
+      // gets all members
       const { data: members } = await supabase
         .from("group_members")
         .select(
@@ -84,6 +85,7 @@ export function DatabaseProvider({ children }) {
         )
         .eq("group_id", group.id);
 
+      // display members
       group.memberCount = members?.length || 0;
       group.members = members?.map((member) => member.profiles) || [];
     }
@@ -99,13 +101,6 @@ export function DatabaseProvider({ children }) {
       .single();
     if (error) throw error;
     return data;
-  }
-
-  async function addGroupMember(groupId, userId) {
-    const { error } = await supabase
-      .from("group_members")
-      .insert([{ group_id: groupId, user_id: userId }]);
-    if (error) throw error;
   }
 
   async function joinGroupByCode(code) {
@@ -155,6 +150,58 @@ export function DatabaseProvider({ children }) {
       return group.id;
     } catch (error) {
       console.error("Error in joinGroupByCode:", error);
+      throw error;
+    }
+  }
+
+  const updateGroup = async (groupId, groupData) => {
+    try {
+      const validFields = ["name", "image_url"];
+      const updateData = Object.keys(groupData)
+        .filter((key) => validFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = groupData[key];
+          return obj;
+        }, {});
+
+      const { data, error } = await supabase
+        .from("groups")
+        .update(updateData)
+        .eq("id", groupId);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error updating group:", error);
+      throw error;
+    }
+  };
+
+  async function deleteGroup(groupId) {
+    try {
+      // fetch items
+      const { data: items } = await supabase
+        .from("bucket_list_items")
+        .select("id")
+        .eq("group_id", groupId);
+
+      if (items?.length > 0) {
+        const itemIds = items.map((item) => item.id);
+
+        // delete all data
+        await supabase.from("upvotes").delete().in("item_id", itemIds);
+        await supabase.from("comments").delete().in("item_id", itemIds);
+        await supabase
+          .from("bucket_list_items")
+          .delete()
+          .eq("group_id", groupId);
+      }
+
+      // delete group members, then group
+      await supabase.from("group_members").delete().eq("group_id", groupId);
+      await supabase.from("groups").delete().eq("id", groupId);
+    } catch (error) {
+      console.error("Error deleting group:", error);
       throw error;
     }
   }
@@ -228,7 +275,7 @@ export function DatabaseProvider({ children }) {
     if (error) throw error;
   }
 
-  // COMMENTS
+  // MESSAGES (formerly COMMENTS)
   async function getComments(itemId) {
     const { data, error } = await supabase
       .from("comments")
@@ -254,6 +301,15 @@ export function DatabaseProvider({ children }) {
     if (error) throw error;
   }
 
+  async function getCommentCount(itemId) {
+    const { count, error } = await supabase
+      .from("comments")
+      .select("*", { count: "exact", head: true })
+      .eq("item_id", itemId);
+    if (error) throw error;
+    return count || 0;
+  }
+
   // RSVPs (formerly UPVOTES)
   async function rsvpBucketListItem(itemId) {
     const { error } = await supabase
@@ -269,15 +325,6 @@ export function DatabaseProvider({ children }) {
       .eq("item_id", itemId)
       .eq("user_id", currentUser.id);
     if (error) throw error;
-  }
-
-  async function getRsvps(itemId) {
-    const { data, error } = await supabase
-      .from("upvotes")
-      .select("user_id")
-      .eq("item_id", itemId);
-    if (error) throw error;
-    return data;
   }
 
   // USERS
@@ -300,59 +347,7 @@ export function DatabaseProvider({ children }) {
     return data;
   }
 
-  // GROUPS
-  const updateGroup = async (groupId, groupData) => {
-    try {
-      const validFields = ["name", "image_url"];
-      const updateData = Object.keys(groupData)
-        .filter((key) => validFields.includes(key))
-        .reduce((obj, key) => {
-          obj[key] = groupData[key];
-          return obj;
-        }, {});
-
-      const { data, error } = await supabase
-        .from("groups")
-        .update(updateData)
-        .eq("id", groupId);
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error("Error updating group:", error);
-      throw error;
-    }
-  };
-
-  async function deleteGroup(groupId) {
-    try {
-      // fetch items
-      const { data: items } = await supabase
-        .from("bucket_list_items")
-        .select("id")
-        .eq("group_id", groupId);
-
-      if (items?.length > 0) {
-        const itemIds = items.map((item) => item.id);
-
-        // delete all data
-        await supabase.from("upvotes").delete().in("item_id", itemIds);
-        await supabase.from("comments").delete().in("item_id", itemIds);
-        await supabase
-          .from("bucket_list_items")
-          .delete()
-          .eq("group_id", groupId);
-      }
-
-      // delete group members, then group
-      await supabase.from("group_members").delete().eq("group_id", groupId);
-      await supabase.from("groups").delete().eq("id", groupId);
-    } catch (error) {
-      console.error("Error deleting group:", error);
-      throw error;
-    }
-  }
-
+  // IMAGES
   const uploadImage = async (file, path) => {
     try {
       if (!path.startsWith("groups/") && !path.startsWith("items/")) {
@@ -409,8 +404,9 @@ export function DatabaseProvider({ children }) {
     createGroup,
     getGroups,
     getGroup,
-    addGroupMember,
     joinGroupByCode,
+    updateGroup,
+    deleteGroup,
     createBucketListItem,
     getBucketListItems,
     updateBucketListItem,
@@ -418,13 +414,11 @@ export function DatabaseProvider({ children }) {
     getComments,
     addComment,
     deleteComment,
+    getCommentCount,
     rsvpBucketListItem,
     removeRsvpBucketListItem,
-    getRsvps,
     getUser,
     getUsersByIds,
-    updateGroup,
-    deleteGroup,
     uploadImage,
   };
 

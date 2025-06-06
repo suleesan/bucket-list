@@ -14,7 +14,6 @@ import { useDatabase } from "../contexts/DatabaseContext";
 import { useAuth } from "../contexts/AuthContext";
 import BucketListItem from "../components/BucketListItem";
 import BucketListDialogs from "../components/BucketListDialogs";
-import { supabase } from "../supabase";
 
 const BucketList = () => {
   const { groupId } = useParams();
@@ -51,49 +50,10 @@ const BucketList = () => {
   const [creators, setCreators] = useState({});
   const [upvoters, setUpvoters] = useState({});
 
-  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
-  const [commentItemId, setCommentItemId] = useState(null);
-  const [commentCounts, setCommentCounts] = useState({});
-  const [commentUsers, setCommentUsers] = useState({});
-
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState("all");
-
-  const fetchCommentCounts = async (items) => {
-    const counts = {};
-    for (const item of items) {
-      const { count, error } = await supabase
-        .from("comments")
-        .select("*", { count: "exact", head: true })
-        .eq("item_id", item.id);
-      counts[item.id] = count || 0;
-    }
-    setCommentCounts(counts);
-  };
-
-  const fetchCommentUsers = async (items) => {
-    const allCommenters = new Set();
-    for (const item of items) {
-      const { data: comments } = await supabase
-        .from("comments")
-        .select("created_by")
-        .eq("item_id", item.id);
-      comments?.forEach((c) => allCommenters.add(c.created_by));
-    }
-    const userIds = Array.from(allCommenters).filter(Boolean);
-    if (userIds.length > 0) {
-      const users = await getUsersByIds(userIds);
-      const userMap = {};
-      users.forEach((user) => {
-        userMap[user.id] = user;
-      });
-      setCommentUsers(userMap);
-    } else {
-      setCommentUsers({});
-    }
-  };
 
   const loadGroupAndItems = async () => {
     try {
@@ -109,8 +69,6 @@ const BucketList = () => {
       });
 
       setItems(sortedItems);
-      await fetchCommentCounts(sortedItems);
-      await fetchCommentUsers(sortedItems);
     } catch (error) {
       setError("Failed to load group and items");
       console.error(error);
@@ -269,23 +227,6 @@ const BucketList = () => {
     }
   };
 
-  const handleOpenComments = (itemId) => {
-    setCommentItemId(itemId);
-    setCommentDialogOpen(true);
-  };
-
-  // const handleCloseComments = () => {
-  //   setCommentDialogOpen(false);
-  //   setCommentItemId(null);
-  // };
-
-  // const handleCommentCountChange = (itemId, count) => {
-  //   setCommentCounts((prev) => ({
-  //     ...prev,
-  //     [itemId]: count,
-  //   }));
-  // };
-
   const handleDeleteItem = async (itemId) => {
     try {
       await deleteBucketListItem(itemId);
@@ -434,14 +375,11 @@ const BucketList = () => {
                 item={item}
                 creators={creators}
                 upvoters={upvoters}
-                commentUsers={commentUsers}
                 currentUser={currentUser}
                 onEdit={handleEditItem}
                 onUpvote={handleRsvp}
                 onRemoveUpvote={handleRemoveRsvp}
-                onOpenComments={handleOpenComments}
                 onDelete={handleDeleteItem}
-                commentCount={commentCounts[item.id] || 0}
                 onImageUpload={handleImageUpload}
               />
             </Grid>

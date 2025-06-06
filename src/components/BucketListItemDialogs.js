@@ -10,7 +10,6 @@ import {
   Box,
   Typography,
   Chip,
-  Stack,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -29,17 +28,14 @@ const BucketListItemDialogs = ({
   creator,
   editItemDialogOpen,
   detailDialogOpen,
-  attendeesDialogOpen,
   editedItem,
   onCloseEditDialog,
   onCloseDetailDialog,
-  onCloseAttendeesDialog,
   onEditItem,
   onDeleteItem,
   onImageChange,
   onUpvote,
   onRemoveUpvote,
-  onOpenComments,
   onSaveItemEdit,
 }) => {
   return (
@@ -481,57 +477,9 @@ const BucketListItemDialogs = ({
               </Box>
             )}
 
-            {/* Comments */}
-            <MessagesSection
-              itemId={item.id}
-              currentUser={currentUser}
-              onCommentCountChange={onOpenComments}
-            />
+            {/* Messages */}
+            <MessagesSection itemId={item.id} currentUser={currentUser} />
           </Box>
-        </DialogContent>
-      </Dialog>
-
-      {/* Attendees Dialog */}
-      <Dialog
-        open={attendeesDialogOpen}
-        onClose={onCloseAttendeesDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ m: 0, p: 2 }}>
-          <Typography variant="subtitle1" component="div">
-            Attendees
-          </Typography>
-          <IconButton
-            aria-label="close"
-            onClick={onCloseAttendeesDialog}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-            }}
-            size="large"
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {upvoters[item.id]?.map((user) => (
-              <Chip
-                key={user.id}
-                label={user.username}
-                sx={{
-                  backgroundColor: "background.default",
-                  "& .MuiChip-label": {
-                    px: 1,
-                    fontSize: "0.875rem",
-                    fontFamily: (theme) => theme.typography.body2.fontFamily,
-                  },
-                }}
-              />
-            ))}
-          </Stack>
         </DialogContent>
       </Dialog>
     </>
